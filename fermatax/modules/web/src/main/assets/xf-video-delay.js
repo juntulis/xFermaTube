@@ -82,10 +82,13 @@
 
   // Ranka pakeista delsa = tiesa. Jei neseniai buvo patikimas 🎤 matavimas, įsimenam skirtumą
   // (mikrofono kelio ir AA vaizdo delsa), kad auto režimas toliau taikytų „🎤 − korekcija“.
+  // Korekcija skaičiuojama iš paskutinių matavimų medianos, ne iš vieno (vienas turi ±20–30 ms triukšmo).
   function manualSet(ms) {
     stopRamp();
     api.set(ms);
-    if (lastOkMeas && Date.now() - lastOkMeas.at < LEARN_MS) setOffset(lastOkMeas.ms - delayMs);
+    var med = recentMedian(LEARN_MS);
+    if (med == null && lastOkMeas && Date.now() - lastOkMeas.at < LEARN_MS) med = lastOkMeas.ms;
+    if (med != null) setOffset(med - delayMs);
     autoCand = null;
   }
 
@@ -202,7 +205,14 @@
       try { if (proc) proc.disconnect(); } catch (e) {}
       ref.getTracks().forEach(function (t) { t.stop(); });
       ac.close().catch(function () {});
-      if (res) { lastMeas = res; if (res.ok) lastOkMeas = { ms: res.ms, at: Date.now() }; }
+      if (res) {
+        lastMeas = res;
+        if (res.ok) {
+          lastOkMeas = { ms: res.ms, at: Date.now() };
+          // Rankinis 🎤 irgi tinka medianai (auto rezultatus prideda autoResult).
+          if (!quiet) { recent.push({ ms: res.ms, at: Date.now() }); if (recent.length > RECENT_N) recent.shift(); }
+        }
+      }
       updateLabel();
       showMeas(text, quiet && err !== NO_PERM);
       if (opts.onDone) opts.onDone(res, err);
@@ -268,13 +278,33 @@
 
   // ---- Auto režimas ----
   // 🎤 matuoja pats: ~20 s po video paleidimo, po užstrigimo (waiting → playing), ir kas AUTO_EVERY_MS.
-  // Delsa keičiama tik kai du matavimai iš eilės sutampa (±AGREE_MS), ir pamažu (RAMP_STEP kas 100 ms),
-  // kad vaizdas nešokinėtų. Taikoma „🎤 − korekcija“; korekciją išmoksta, kai pataisai ranka.
+  // Vienas matavimas turi ±20–30 ms triukšmo, todėl:
+  //  - didelis pokytis (> BIG_MS, pvz. po užstrigimo) taikomas, kai du matavimai iš eilės sutampa (±AGREE_MS);
+  //  - smulkus derinimas: paskutinių RECENT_N patikimų matavimų mediana, taisoma jau nuo FINE_MS;
+  //  - kol matavimų mažiau nei MIN_FOR_FINE, matuojama dažniau (kas AUTO_CONFIRM_MS).
+  // Keičiama pamažu (RAMP_STEP kas 100 ms), kad vaizdas nešokinėtų. Taikoma „🎤 − korekcija“;
+  // korekciją išmoksta, kai pataisai ranka.
   var AUTO_KEY = 'xf_auto' + SFX, OFF_KEY = 'xf_mic_offset_ms' + SFX;
   var NO_PERM = 'nėra mikrofono leidimo', NO_APP = 'veikia tik programoje';
-  var AUTO_START_MS = 20000, AUTO_STALL_MS = 8000, AUTO_EVERY_MS = 90000, AUTO_AFTER_CHANGE_MS = 30000;
+  var AUTO_START_MS = 20000, AUTO_STALL_MS = 8000, AUTO_EVERY_MS = 60000, AUTO_AFTER_CHANGE_MS = 30000;
   var AUTO_CONFIRM_MS = 3000, AUTO_RETRY_MS = 30000, LEARN_MS = 10 * 60000;
-  var SAME_MS = 30, AGREE_MS = 40, RAMP_STEP = 20;
+  var FINE_MS = 12, BIG_MS = 60, AGREE_MS = 40, RAMP_STEP = 20, RECENT_N = 5, MIN_FOR_FINE = 3;
+  var BIG_CONF = 0.35, BIG_RATIO = 1.5;
+  var recent = [];       // paskutiniai patikimi 🎤 matavimai {ms, at} (žali, be korekcijos)
+
+  function median(a) {
+    var s = a.slice().sort(function (x, y) { return x - y; }), n = s.length;
+    return n ? (n % 2 ? s[(n - 1) >> 1] : Math.round((s[n / 2 - 1] + s[n / 2]) / 2)) : null;
+  }
+
+  // Paskutinių RECENT_N matavimų, ne senesnių nei maxAgeMs, mediana (arba null).
+  function recentMedian(maxAgeMs) {
+    var now = Date.now(), v = [];
+    for (var i = recent.length - 1; i >= 0 && v.length < RECENT_N; i--) {
+      if (!maxAgeMs || now - recent[i].at <= maxAgeMs) v.push(recent[i].ms);
+    }
+    return median(v);
+  }
   // Telefone (be AA) auto numatytai išjungtas: ten garsas su vaizdu ir taip sutampa.
   var autoStored = localStorage.getItem(AUTO_KEY);
   var autoOn = autoStored != null ? autoStored !== '0' : CONN !== 'phone';
@@ -283,9 +313,17 @@
   var autoFake = null;   // testui naršyklėje: imituojama delsa (ms) vietoj mikrofono
   var autoLog = [];      // paskutiniai auto įvykiai (diagnostikai)
 
+  // Žurnalas saugomas ir localStorage (paskutiniai 40 įrašų, su ryšiu), kad vėliau būtų galima perskaityti.
+  var LOG_KEY = 'xf_auto_log';
   function logAuto(s) {
-    autoLog.push(new Date().toTimeString().slice(0, 8) + ' ' + s);
+    var line = new Date().toTimeString().slice(0, 8) + ' ' + s;
+    autoLog.push(line);
     if (autoLog.length > 20) autoLog.shift();
+    try {
+      var all = JSON.parse(localStorage.getItem(LOG_KEY) || '[]');
+      all.push(new Date().toISOString().slice(5, 10) + ' ' + (CONN || '-') + ' ' + line);
+      localStorage.setItem(LOG_KEY, JSON.stringify(all.slice(-40)));
+    } catch (e) {}
   }
 
   function setOffset(v) {
@@ -324,24 +362,55 @@
       autoSchedule(AUTO_RETRY_MS);
       return;
     }
-    var target = Math.max(0, Math.min(3000, res.ms - micOffset));
-    if (Math.abs(target - delayMs) <= SAME_MS) {
-      autoCand = null; logAuto('🎤 ' + res.ms + ' → gerai (' + delayMs + ')');
-      autoSchedule(AUTO_EVERY_MS);
+    var clamp = function (v) { return Math.max(0, Math.min(3000, Math.round(v))); };
+    var target = clamp(res.ms - micOffset);
+    var tag = '🎤 ' + res.ms + ' (' + res.conf + (res.ts === false ? ', be ts' : '') + ')';
+
+    // Didelis pokytis: ar ne vienkartinė klaida? Reikia dviejų sutampančių ir aiškių (BIG_CONF, BIG_RATIO)
+    // matavimų iš eilės: ritmiškoje muzikoje koreliacija gali pagauti ne tą smailę.
+    if (Math.abs(target - delayMs) > BIG_MS) {
+      if (res.conf < BIG_CONF || res.ratio < BIG_RATIO) {
+        logAuto(tag + ' → per neaiškus dideliam pokyčiui (' + res.ratio + ')');
+        autoSchedule(AUTO_CONFIRM_MS);
+        return;
+      }
+      if (autoCand != null && Math.abs(autoCand.target - target) <= AGREE_MS) {
+        var t = clamp((autoCand.target + target) / 2);
+        logAuto(tag + ' → keičiu ' + delayMs + '→' + t);
+        showMeas('🎤 auto: ' + delayMs + ' → ' + t + ' ms', true);
+        recent = [autoCand.meas, { ms: res.ms, at: Date.now() }];   // seni matavimai nebetinka
+        autoCand = null;
+        rampTo(t);
+        autoSchedule(AUTO_CONFIRM_MS);
+        return;
+      }
+      logAuto(tag + ' → kandidatas ' + target + ', tikrinu dar kartą');
+      autoCand = { target: target, meas: { ms: res.ms, at: Date.now() } };
+      autoSchedule(AUTO_CONFIRM_MS);
       return;
     }
-    if (autoCand != null && Math.abs(autoCand - target) <= AGREE_MS) {
-      var t = Math.round((autoCand + target) / 2);
-      logAuto('🎤 ' + res.ms + ' → keičiu ' + delayMs + '→' + t);
-      showMeas('🎤 auto: ' + delayMs + ' → ' + t + ' ms', true);
-      autoCand = null;
-      rampTo(t);
+
+    // Smulkus derinimas pagal medianą.
+    autoCand = null;
+    recent.push({ ms: res.ms, at: Date.now() });
+    if (recent.length > RECENT_N) recent.shift();
+    if (recent.length < MIN_FOR_FINE) {
+      logAuto(tag + ' → renku (' + recent.length + '/' + MIN_FOR_FINE + ')');
+      autoSchedule(AUTO_CONFIRM_MS);
+      updateDiag();
+      return;
+    }
+    var med = clamp(recentMedian() - micOffset);
+    if (Math.abs(med - delayMs) > FINE_MS) {
+      logAuto(tag + ' → tikslinu ' + delayMs + '→' + med + ' (mediana)');
+      showMeas('🎤 auto: ' + delayMs + ' → ' + med + ' ms', true);
+      rampTo(med);
       autoSchedule(AUTO_AFTER_CHANGE_MS);
-      return;
+    } else {
+      logAuto(tag + ' → gerai (' + delayMs + ', mediana ' + med + ')');
+      autoSchedule(AUTO_EVERY_MS);
     }
-    logAuto('🎤 ' + res.ms + ' → kandidatas ' + target + ', tikrinu dar kartą');
-    autoCand = target;
-    autoSchedule(AUTO_CONFIRM_MS);
+    updateDiag();
   }
 
   function setAuto(on) {
@@ -422,7 +491,9 @@
     diag.textContent = (delayMs > 0
       ? stats.capFps + '/' + stats.drawFps + ' fps · ' + stats.bmpMs + ' ms' + (stats.skip ? ' · −' + stats.skip : '')
       : '') + (fmt ? (delayMs > 0 ? ' · ' : '') + fmt : '') + (micOffset ? ' · kor. ' + micOffset : '') +
-      (CONN ? ' · ' + CONN : '');
+      (CONN ? ' · ' + CONN : '') +
+      // Paskutiniai 🎤 matavimai (žali ms): matosi, kiek jie šokinėja.
+      (recent.length ? ' · 🎤 ' + recent.map(function (r) { return r.ms; }).join('/') : '');
   }
 
   // Canvas ir UI dedami šalia <video> (tame pačiame tėve), kad matytųsi ir fullscreen režime.
@@ -597,6 +668,8 @@
     // Testui: auto(true) su imituota delsa (ms) vietoj mikrofono; null – tikras mikrofonas.
     _autoFake: function (ms) { autoFake = ms; autoBlocked = false; },
     _autoTick: function () { autoTick(); },
+    // Testui: paduoti auto režimui matavimo rezultatą {ms, ok, conf, ratio} be mikrofono.
+    _autoResult: function (res, err) { autoResult(res, err); },
     setOffset: function (v) { setOffset(v); updateDiag(); return micOffset; },
     // Diagnostika: kiek ms rodomas kadras atsilieka nuo grojamo video (turi būti ≈ delayMs)
     lag: function () {
