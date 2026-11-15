@@ -1,0 +1,127 @@
+package me.app.fermatax.auto.carapps.server;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
+import android.view.KeyEvent;
+
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.robolectric.RobolectricTestRunner;
+import org.robolectric.annotation.Config;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
+
+@RunWith(RobolectricTestRunner.class)
+@Config(sdk = 33)
+public class CarDisplayServerImplTest {
+
+	@org.junit.After
+	public void cleanPanel() {
+		HiddenTest.resetPanel();
+		org.robolectric.util.ReflectionHelpers.setStaticField(Hidden.class, "initialized", false);
+	}
+
+	@Test public void powerKeyOnlySentToAScreenThatIsOn() {
+		AtomicInteger sent = new AtomicInteger();
+		CarDisplayServerImpl.sleepIfScreenOn(false, sent::incrementAndGet);
+		assertEquals(0, sent.get());
+		CarDisplayServerImpl.sleepIfScreenOn(true, sent::incrementAndGet);
+		assertEquals(1, sent.get());
+	}
+
+	@Test public void sleepPhoneRefusesAStrangerUid() {
+		AtomicInteger sent = new AtomicInteger();
+		new CarDisplayServerImpl(android.os.Binder.getCallingUid() + 1, 1, "p") {
+			@Override void sendPowerIfScreenOn() { sent.incrementAndGet(); }
+		}.sleepPhone();
+		assertEquals(0, sent.get());
+	}
+
+	@Test
+	public void panelPowerRefusesAStrangerUid() throws Exception {
+		HiddenTest.usePanelFake();
+		new CarDisplayServerImpl(android.os.Binder.getCallingUid() + 1, 1, "p").setPanelPower(false);
+		assertTrue(HiddenTest.FakePanel.modes.isEmpty());
+	}
+
+	@Test
+	public void clientLeavingRestoresAPanelItTurnedOff() throws Exception {
+		HiddenTest.usePanelFake();
+		CarDisplayServerImpl server = new CarDisplayServerImpl(android.os.Binder.getCallingUid(), 1, "p");
+		server.setPanelPower(false);
+		assertEquals(java.util.Arrays.asList(0, 0), HiddenTest.FakePanel.modes);
+
+		server.releaseInternal();
+		assertEquals(java.util.Arrays.asList(0, 0, 2, 2), HiddenTest.FakePanel.modes);
+	}
+
+	@Test
+	public void clientLeavingDoesNotLightASleepingPhone() throws Exception {
+		HiddenTest.usePanelFake();
+		new CarDisplayServerImpl(android.os.Binder.getCallingUid(), 1, "p").releaseInternal();
+		assertTrue(HiddenTest.FakePanel.modes.isEmpty());
+	}
+
+	/** The root channel can start a server again at any time, so an idle one leaves (the timer is never run here). */
+	@Test
+	public void rootServerArmsTheIdleExit() {
+		CarDisplayServerImpl server = new CarDisplayServerImpl(android.os.Binder.getCallingUid(), 1, "p");
+		assertTrue(idleTimerArmed());
+		server.releaseInternal();
+		assertTrue(idleTimerArmed());
+	}
+
+	/** Without Wi-Fi an ADB-started server cannot be started again: it must outlive the end of a car session. */
+	@Test
+	public void adbStartedServerNeverArmsTheIdleExit() {
+		CarDisplayServerImpl server = new CarDisplayServerImpl(android.os.Binder.getCallingUid(), 1, "p", true);
+		assertFalse(idleTimerArmed());
+		server.releaseInternal();
+		assertFalse(idleTimerArmed());
+	}
+
+	@Test
+	public void onlyThePersistArgumentKeepsTheServer() {
+		assertTrue(Main.persists(new String[]{"10150", "1", "p", "persist"}));
+		assertFalse(Main.persists(new String[]{"10150", "1", "p"}));
+		assertFalse(Main.persists(new String[]{"10150", "1", "p", "other"}));
+	}
+
+	private static boolean idleTimerArmed() {
+		return !org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).getNextScheduledTaskTime()
+				.equals(java.time.Duration.ZERO);
+	}
+
+	/** Android 10: a display resized to 0 kills system_server, divide by zero in configureDisplayPolicy. */
+	@Test
+	public void aLostSurfaceDoesNotResizeTheDisplay() {
+		assertFalse(CarDisplayServerImpl.canResize(0, 0, 0));
+		assertFalse(CarDisplayServerImpl.canResize(100, 100, 0));
+		assertFalse(CarDisplayServerImpl.canResize(100, 0, 160));
+		assertFalse(CarDisplayServerImpl.canResize(-1, 100, 160));
+		assertTrue(CarDisplayServerImpl.canResize(100, 100, 160));
+	}
+
+	@Test
+	public void probeReleasesTheKeySoNoneStaysHeldOnTheDisplay() {
+		List<KeyEvent> sent = new ArrayList<>();
+		assertTrue(CarDisplayServerImpl.injectionAccepted(10, e -> sent.add(e)));
+
+		assertEquals(2, sent.size());
+		assertEquals(KeyEvent.ACTION_DOWN, sent.get(0).getAction());
+		assertEquals(KeyEvent.ACTION_UP, sent.get(1).getAction());
+		assertEquals(KeyEvent.KEYCODE_UNKNOWN, sent.get(0).getKeyCode());
+		assertEquals(KeyEvent.KEYCODE_UNKNOWN, sent.get(1).getKeyCode());
+	}
+
+	@Test
+	public void probeFailsWhenEitherEventIsRefused() {
+		assertFalse(CarDisplayServerImpl.injectionAccepted(10, e -> false));
+		assertFalse(CarDisplayServerImpl.injectionAccepted(10, e -> e.getAction() == KeyEvent.ACTION_DOWN));
+		assertFalse(CarDisplayServerImpl.injectionAccepted(10, e -> e.getAction() == KeyEvent.ACTION_UP));
+	}
+}

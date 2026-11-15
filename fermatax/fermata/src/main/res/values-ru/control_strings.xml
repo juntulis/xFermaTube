@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="phone_header_nothing_playing">Ничего не воспроизводится</string>
+    <string name="phone_header_aa_disconnect">AA отключен</string>
+    <string name="phone_header_aa_connected">AA подключен</string>
+    <string name="phone_open_on_car_strip_title">Открыть в авто</string>
+</resources>

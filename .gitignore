@@ -1,0 +1,13 @@
+.vscode/sftp.json
+.env
+.env.*
+*.log
+*.bak
+node_modules/
+.venv/
+__pycache__/
+build/
+dist/
+# Private, Lithuanian working notes and agent instructions (not published)
+CLAUDE.md
+NOTES.lt.md
