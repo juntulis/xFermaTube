@@ -1,15 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name_mobile_release" translatable="false">xFermata Tube</string>
-    <string name="app_name_auto_release" translatable="false">xFermata Tube</string>
-    <string name="app_name_mobile_debug" translatable="false">xFermata Tube</string>
-    <string name="app_name_auto_debug" translatable="false">xFermata Tube</string>
-    <string name="mirror_service_name_release" translatable="false">xFermata Mirror</string>
-    <string name="mirror_service_name_debug" translatable="false">xFermata Mirror</string>
+    <string name="app_name_mobile_release" translatable="false">xFermaTube</string>
+    <string name="app_name_auto_release" translatable="false">xFermaTube</string>
+    <string name="app_name_mobile_debug" translatable="false">xFermaTube</string>
+    <string name="app_name_auto_debug" translatable="false">xFermaTube</string>
+    <string name="mirror_service_name_release" translatable="false">xFermaTube Mirror</string>
+    <string name="mirror_service_name_debug" translatable="false">xFermaTube Mirror</string>
     <string name="media_service_name_mobile_release" translatable="false">@string/app_name_mobile_release</string>
-    <string name="media_service_name_auto_release" translatable="false">xFermata Audio</string>
+    <string name="media_service_name_auto_release" translatable="false">xFermaTube Audio</string>
     <string name="media_service_name_mobile_debug" translatable="false">@string/app_name_mobile_debug</string>
-    <string name="media_service_name_auto_debug" translatable="false">xFermata Audio</string>
+    <string name="media_service_name_auto_debug" translatable="false">xFermaTube Audio</string>
     <string name="xf_back" translatable="false">Back</string>
     <string name="xf_history" translatable="false">History</string>
     <string name="engine_mp_name" translatable="false">MediaPlayer</string>

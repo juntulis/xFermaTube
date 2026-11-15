@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="docs/icon.svg" width="120" alt="xFermata Tube icon">
+  <img src="docs/icon.svg" width="120" alt="xFermaTube icon">
 </p>
 
-<h1 align="center">xFermata Tube</h1>
+<h1 align="center">xFermaTube</h1>
 
 <p align="center">
   A lightweight YouTube player for Android Auto that fixes the audio delay automatically, using the phone's microphone.
@@ -21,7 +21,7 @@ Some apps had an "audio delay" setting, but it either did nothing for Android Au
 
 ## What I built
 
-xFermata Tube is a stripped-down fork of [FermataX](https://github.com/chuoinho/fermataX) (itself a fork of [Fermata](https://github.com/AndreyPavlenko/Fermata)). It keeps only YouTube and adds A/V sync that tunes itself.
+xFermaTube is a stripped-down fork of [FermataX](https://github.com/chuoinho/fermataX) (itself a fork of [Fermata](https://github.com/AndreyPavlenko/Fermata)). It keeps only YouTube and adds A/V sync that tunes itself.
 
 - **Delayed video instead of earlier audio.** Audio that is already in the car's buffer can't be sped up, so the app holds the picture back. YouTube keeps playing normally. The frames are copied to a canvas and shown X ms later, so they line up with what you hear from the car's speakers.
 - **Automatic delay measurement with the phone's microphone.** The app records about 10 seconds of what the car's speakers actually play. It compares that with the video's own soundtrack and finds the lag by cross-correlation. In auto mode this repeats on its own: shortly after playback starts, after a buffering stall, and every 90 seconds. The delay changes only when two measurements agree, and it changes gradually so the picture doesn't jump.
@@ -34,12 +34,21 @@ xFermata Tube is a stripped-down fork of [FermataX](https://github.com/chuoinho/
 
 In my car (USB Android Auto), the measured audio lag was about 300 ms. With the video delayed by that amount, speech and picture match. The microphone measurement worked in the car without interrupting playback. Before, manual calibration with a sync test video was the only option. Now the app finds the value itself and keeps correcting it if the lag drifts.
 
+## Open source, no tracking
+
+I built this to fix one annoying problem for myself, not to make money or collect data.
+
+- **Fully open source (GPL-3.0).** All the code is in this repo. You can read it and build the APK yourself.
+- **No ads, analytics or tracking added.** There are no analytics or crash-reporting SDKs, no accounts and no xFermata server. Nothing is sent to me.
+- **The microphone stays on the phone.** It is used only for the sync measurement and only while a video is playing. The recording is turned into a loudness curve in memory to find the delay, and the audio is never saved or uploaded. See [`XfMicRecorder.java`](fermatax/modules/web/src/main/java/me/aap/fermata/addon/web/yt/XfMicRecorder.java).
+- **YouTube is the normal mobile YouTube site.** Google's own privacy policy applies, the same as in any browser.
+
 ## Install
 
 1. Download the APK from [Releases](../../releases).
 2. Sideload it so that Android Auto accepts it, for example with **AAenabler** or **KingInstaller**. Then turn on *Unknown sources* in Android Auto developer settings.
-3. On the phone, grant the **microphone** permission: Settings → Apps → xFermata Tube → Permissions → Microphone. The app can't ask for it while it runs on the car screen.
-4. Optional: open xFermata Tube on the phone and sign in to YouTube (avatar → Sign in).
+3. On the phone, grant the **microphone** permission: Settings → Apps → xFermaTube → Permissions → Microphone. The app can't ask for it while it runs on the car screen.
+4. Optional: open xFermaTube on the phone and sign in to YouTube (avatar → Sign in).
 
 In the car, tap the faint **⏱ X ms** label at the top left of the video to see the controls:
 
