@@ -47,7 +47,9 @@ In the car, tap the faint **⏱ X ms** label at the top left of the video to see
 - **🎤** measures the delay once.
 - **Auto** turns automatic measurement on or off (green = on).
 
-> The release APK is debug-signed and built for arm64 phones only. Use it only while parked, and follow your local laws.
+> The release APK is debug-signed and built for arm64 phones only.
+
+> **Safety:** the app has no driving lock of its own, and in my car the video keeps playing while moving. Other cars or Android Auto versions may block it. The driver must never watch video while driving: it is dangerous and illegal in many places. Use it only while parked or for passengers, and follow your local laws.
 
 ## Build
 
