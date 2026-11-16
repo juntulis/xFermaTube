@@ -59,7 +59,7 @@ In the car, tap the faint **⏱ X ms** label at the top left of the video to see
 
 Tap the label again to close it. If you don't need it, hide it in Settings → *Show A/V sync badge*: the delay and auto sync keep working.
 
-In fullscreen, a tap shows or hides the control panel. Play/pause, seek and the **⋮** menu (quality, scaling, speed) are buttons on that panel. Swipe gestures on the video are turned off, so a stray touch doesn't pause, seek or skip.
+In fullscreen, a tap shows or hides the control panel. Play/pause, seek and the **⋮** menu (quality, subtitles, audio track, scaling, loop, stable volume, speed) are buttons on that panel. Subtitles in fullscreen are delayed together with the picture. Swipe gestures on the video are turned off, so a stray touch doesn't pause, seek or skip.
 
 Auto quality picks the best available resolution up to **1080p** by default (Settings → *Highest quality limit*: 720p, 1080p or no limit). Higher resolutions cost battery and data without a visible gain on a car screen.
 

@@ -363,6 +363,8 @@ class YoutubeMediaEngine implements MediaEngine, OverlayMenu.SelectionHandler {
 			if (a == null) return;
 			var cp = a.getControlPanel();
 			if (cp == null) return;
+			// xFermaTube: the ⋮ menu shows loop / stable volume state; read it before the menu opens.
+			if (me.aap.fermata.xf.XfConfig.YOUTUBE_ONLY) web.xfRefreshPlayerState();
 			// xFermaTube: a tap only shows or hides the control panel; pause is the panel button.
 			if (!me.aap.fermata.xf.XfConfig.YOUTUBE_ONLY && a.isGlassTheme() && cp.isVideoControlsVisible() &&
 					(System.currentTimeMillis() - cp.getLastControlsShowTimestamp() >= 500)) {
@@ -1082,9 +1084,25 @@ class YoutubeMediaEngine implements MediaEngine, OverlayMenu.SelectionHandler {
 				ResourcesCompat.getDrawable(r, R.drawable.video_quality, ctx.getTheme()),
 				r.getString(R.string.video_quality)).setFutureSubmenu(
 				menu -> YoutubeQualityMenu.populate(web, menu, this));
+		// xFermaTube: YouTube grotuvo nustatymai, kurių viso ekrano režime kitaip nepasieksi.
+		b.addItem(R.id.xf_subtitles,
+				ResourcesCompat.getDrawable(r, me.aap.fermata.R.drawable.subtitles, ctx.getTheme()),
+				r.getString(R.string.xf_subtitles)).setFutureSubmenu(
+				menu -> XfPlayerMenu.populateCaptions(web, menu, this, ctx));
+		b.addItem(R.id.xf_audio_track,
+				ResourcesCompat.getDrawable(r, me.aap.fermata.R.drawable.audiotrack, ctx.getTheme()),
+				r.getString(R.string.xf_audio_track)).setFutureSubmenu(
+				menu -> XfPlayerMenu.populateAudio(web, menu, this));
 		b.addItem(me.aap.fermata.R.id.video_scaling,
 				ResourcesCompat.getDrawable(r, R.drawable.video_scaling, ctx.getTheme()),
 				r.getString(me.aap.fermata.R.string.video_scaling)).setSubmenu(this::videoScalingMenu);
+		b.addItem(R.id.xf_loop, null, r.getString(R.string.xf_loop))
+				.setChecked(web.xfLoop(), false).setHandler(this);
+		if (web.xfHasStableVolume()) {
+			b.addItem(R.id.xf_stable_volume, null, r.getString(R.string.xf_stable_volume))
+					.setChecked(web.xfStableVolume(), false).setHandler(this);
+		}
+		web.xfRefreshPlayerState();
 		b.addItem(R.id.yt_auto_fullscreen, null, r.getString(R.string.yt_auto_fullscreen))
 				.setChecked(web.getAddon().getAutoFullscreen(), false).setHandler(this);
 	}
@@ -1108,6 +1126,14 @@ class YoutubeMediaEngine implements MediaEngine, OverlayMenu.SelectionHandler {
 		if (itemId == R.id.yt_auto_fullscreen) {
 			YoutubeAddon addon = web.getAddon();
 			addon.setAutoFullscreen(!addon.getAutoFullscreen());
+			return true;
+		} else if (itemId == R.id.xf_loop) {
+			web.xfSetLoop(!web.xfLoop());
+			return true;
+		} else if (itemId == R.id.xf_stable_volume) {
+			web.xfSetStableVolume(!web.xfStableVolume());
+			return true;
+		} else if (XfPlayerMenu.select(web, item)) {
 			return true;
 		} else if (itemId == me.aap.fermata.R.id.video_scaling_best) {
 			web.setScale(VideoScale.CONTAIN);

@@ -243,8 +243,14 @@ public class YoutubeFragment extends WebBrowserFragment
 			YoutubeAddon addon = AddonManager.get().getAddon(YoutubeAddon.class);
 			if (addon != null) addon.markSessionInactive(System.currentTimeMillis());
 			if (!view.usesAutoPlaybackBehavior()) return;
-			discardHostFullscreenSuspension(view);
 			view.setFullscreenTapEnabled(false);
+			// xFermaTube: opening Settings from a fullscreen video only suspends the fullscreen
+			// presentation, so that Back returns to the fullscreen video, not to the watch page.
+			if (me.aap.fermata.xf.XfConfig.YOUTUBE_ONLY) {
+				suspendPlaybackPresentation(view);
+				if (hostFullscreenSuspension != null) return;
+			}
+			discardHostFullscreenSuspension(view);
 			view.leavePlaybackPresentation();
 		} else {
 			YoutubeAddon addon = AddonManager.get().getAddon(YoutubeAddon.class);
@@ -257,7 +263,10 @@ public class YoutubeFragment extends WebBrowserFragment
 				if (returnAction == YoutubeAddon.SessionReturnAction.RESET_HOME)
 					resetStaleSession(activity, view);
 			}
-			if (view.usesAutoPlaybackBehavior()) syncPlaybackStateSoon();
+			if (view.usesAutoPlaybackBehavior()) {
+				syncPlaybackStateSoon();
+				restorePlaybackPresentationSoon(view);
+			}
 		}
 	}
 

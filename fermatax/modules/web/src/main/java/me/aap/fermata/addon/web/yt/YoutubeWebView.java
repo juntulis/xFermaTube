@@ -1189,6 +1189,7 @@ public class YoutubeWebView extends FermataWebView {
 
 	FutureSupplier<String> getVideoQualities() {
 		Promise<String> p = js.getResultPromise();
+		evaluateJavascript("window.__xfList=0", null); // xFermaTube: pavėlavęs subtitrų sąrašas nebegalioja
 		evaluateJavascript(YoutubeScripts.videoQualities(JS_EVENT, JS_VIDEO_QUALITIES,
 				getContext().getString(me.aap.fermata.R.string.auto)), null);
 		return p;
@@ -1196,6 +1197,107 @@ public class YoutubeWebView extends FermataWebView {
 
 	void setVideoQuality(int idx) {
 		evaluateJavascript(YoutubeScripts.setVideoQuality(idx), null);
+	}
+
+	// ---- xFermaTube: YouTube grotuvo nustatymai ⋮ meniu (assets/xf-video-delay.js) ----
+
+	private static final int XF_STATE_LOOP = 1;
+	private static final int XF_STATE_HAS_DRC = 2;
+	private static final int XF_STATE_DRC = 4;
+	private int xfPlayerState;
+
+	/** Subtitrų takeliai eilutėmis ('*' = pasirinktas, '>' = siūlomas vertimas į telefono kalbą). */
+	FutureSupplier<String> xfCaptionTracks() {
+		JSONArray langs = new JSONArray();
+		android.os.LocaleList locales = android.os.LocaleList.getDefault();
+		for (int i = 0; i < locales.size(); i++) {
+			String lang = locales.get(i).getLanguage();
+			if (!lang.isEmpty()) langs.put(lang);
+		}
+		// Telefonas dažnai paliktas angliškas: pasiūlyk ir SIM (ar tinklo) šalies kalbą.
+		String country = xfSimCountry();
+		if (!country.isEmpty()) {
+			String lang = android.icu.util.ULocale.addLikelySubtags(
+					new android.icu.util.ULocale("und", country)).getLanguage();
+			if (!lang.isEmpty() && !"und".equals(lang)) langs.put(lang);
+		}
+		return xfPlayerList("ccList(" + langs + ",d)");
+	}
+
+	private String xfSimCountry() {
+		try {
+			android.telephony.TelephonyManager tm = (android.telephony.TelephonyManager)
+					getContext().getApplicationContext().getSystemService(android.content.Context.TELEPHONY_SERVICE);
+			if (tm == null) return "";
+			String c = tm.getSimCountryIso();
+			if ((c == null) || c.isEmpty()) c = tm.getNetworkCountryIso();
+			return (c == null) ? "" : c.toUpperCase(java.util.Locale.ROOT);
+		} catch (RuntimeException err) {
+			return "";
+		}
+	}
+
+	FutureSupplier<String> xfAudioTracks() {
+		return xfPlayerList("auList(d)");
+	}
+
+	private FutureSupplier<String> xfPlayerList(String call) {
+		Promise<String> p = js.getResultPromise();
+		// Subtitrų sąrašas gali atsakyti pavėluotai (laukia takelių): atsakymas galioja tik tada,
+		// kai po jo neprašyta kito sąrašo, kitaip jis užpildytų svetimą meniu.
+		int id = ++xfListRequest;
+		evaluateJavascript("(function(){window.__xfList=" + id + ";var d=function(r){" +
+				"if(window.__xfList!==" + id + ")return;" + JS_EVENT + "(" + JS_VIDEO_QUALITIES +
+				",r||'');};var x=window.__xfDelay;if(x&&x.ccList)x." + call + ";else d('');})()", null);
+		return p;
+	}
+
+	private int xfListRequest;
+
+	void xfSetCaptionTrack(int index) {
+		evaluateJavascript("window.__xfDelay&&window.__xfDelay.ccSet&&window.__xfDelay.ccSet(" +
+				index + ")", null);
+	}
+
+	void xfSetAudioTrack(int index) {
+		evaluateJavascript("window.__xfDelay&&window.__xfDelay.auSet&&window.__xfDelay.auSet(" +
+				index + ")", null);
+	}
+
+	/** Atnaujina kartojimo ir „Stable volume“ būseną; kviečiama parodant valdymo juostą. */
+	void xfRefreshPlayerState() {
+		evaluateJavascript("(window.__xfDelay&&window.__xfDelay.playerState)?" +
+				"window.__xfDelay.playerState():0", value -> {
+			try {
+				xfPlayerState = Integer.parseInt(value);
+			} catch (NumberFormatException | NullPointerException ex) {
+				xfPlayerState = 0;
+			}
+		});
+	}
+
+	boolean xfLoop() {
+		return (xfPlayerState & XF_STATE_LOOP) != 0;
+	}
+
+	boolean xfHasStableVolume() {
+		return (xfPlayerState & XF_STATE_HAS_DRC) != 0;
+	}
+
+	boolean xfStableVolume() {
+		return (xfPlayerState & XF_STATE_DRC) != 0;
+	}
+
+	void xfSetLoop(boolean on) {
+		xfPlayerState = on ? (xfPlayerState | XF_STATE_LOOP) : (xfPlayerState & ~XF_STATE_LOOP);
+		evaluateJavascript("window.__xfDelay&&window.__xfDelay.setLoop&&window.__xfDelay.setLoop(" +
+				on + ")", null);
+	}
+
+	void xfSetStableVolume(boolean on) {
+		xfPlayerState = on ? (xfPlayerState | XF_STATE_DRC) : (xfPlayerState & ~XF_STATE_DRC);
+		evaluateJavascript("window.__xfDelay&&window.__xfDelay.setDrc&&window.__xfDelay.setDrc(" +
+				on + ")", null);
 	}
 
 	void setHighestVideoQuality() {

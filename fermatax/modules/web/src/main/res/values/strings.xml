@@ -25,6 +25,13 @@
     <string name="xf_max_quality_none" translatable="false">No limit</string>
     <string name="xf_sync_badge" translatable="false">Show A/V sync badge (⏱)</string>
     <string name="xf_sync_badge_sub" translatable="false">The small ⏱ control in the video corner. Delay and auto sync keep working when it is hidden.</string>
+    <string name="xf_subtitles" translatable="false">Subtitles</string>
+    <string name="xf_subtitles_off" translatable="false">Off</string>
+    <string name="xf_subtitles_none" translatable="false">No subtitles for this video</string>
+    <string name="xf_subtitles_translate" translatable="false">Auto-translate: %1$s</string>
+    <string name="xf_audio_track" translatable="false">Audio track</string>
+    <string name="xf_loop" translatable="false">Loop video</string>
+    <string name="xf_stable_volume" translatable="false">Stable volume</string>
     <string name="yt_auto_fullscreen">Automatic fullscreen</string>
     <string name="try_to_skip_ad">Try to skip advertising</string>
     <string name="sponsorblock" translatable="false">SponsorBlock</string>

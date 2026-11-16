@@ -42,6 +42,202 @@
     for (var i = 0; i < queue.length; i++) queue[i].bmp.close();
     queue = [];
     lastT = 0;
+    ccReset();
+  }
+
+  // ---- Subtitrai ----
+  // Viso ekrano (immersive) režime YouTube subtitrų langas paslėptas kartu su visu puslapiu ir
+  // nevėlinamas. Tekstą kopijuojam į savo eilutę virš vaizdo ir rodom po delayMs, kaip kadrus.
+  var cc = null, ccRoot = null, ccObs = null, ccLast = '', ccSeq = 0, ccShownSeq = 0;
+
+  function ccRead() {
+    if (!ccRoot) return '';
+    var lines = ccRoot.querySelectorAll('.caption-visual-line'), out = [];
+    if (!lines.length) lines = ccRoot.querySelectorAll('.ytp-caption-segment');
+    for (var i = 0; i < lines.length; i++) {
+      // „caption-window-_N“ yra YouTube pranešimas („… >> Lithuanian, Click for settings“), ne subtitrai.
+      var w = lines[i].closest ? lines[i].closest('.caption-window') : null;
+      if (w && /^caption-window-_/.test(w.id || '')) continue;
+      var s = (lines[i].textContent || '').replace(/\s+/g, ' ').trim();
+      if (s) out.push(s);
+    }
+    return out.join('\n');
+  }
+
+  function ccShow(txt) {
+    if (!cc) return;
+    while (cc.firstChild) cc.removeChild(cc.firstChild);
+    var parts = txt ? txt.split('\n') : [];
+    for (var i = 0; i < parts.length; i++) {
+      if (i) cc.appendChild(document.createElement('br'));
+      var sp = document.createElement('span');
+      sp.textContent = parts[i];
+      cc.appendChild(sp);
+    }
+    cc.classList.toggle('xf-cc-on', parts.length > 0);
+  }
+
+  function ccChanged() {
+    var txt = ccRead();
+    if (txt === ccLast) return;
+    ccLast = txt;
+    var seq = ++ccSeq, d = capturing ? delayMs : 0;
+    function apply() { if (seq > ccShownSeq) { ccShownSeq = seq; ccShow(txt); } }
+    if (d > 0) setTimeout(apply, d); else apply();
+  }
+
+  // Po persukimo ar naujo video: laukiantys seni tekstai nebetinka.
+  function ccReset() {
+    ccShownSeq = ccSeq;
+    ccLast = null;
+    if (ccRoot) ccChanged();
+  }
+
+  function ccAttach(parent) {
+    if (typeof MutationObserver === 'undefined') return;
+    if (!cc) { cc = document.createElement('div'); cc.id = 'xf-cc'; }
+    if (cc.parentElement !== parent) parent.appendChild(cc);
+    var root = document.querySelector('.ytp-caption-window-container');
+    if (root === ccRoot) return;
+    if (ccObs) ccObs.disconnect();
+    ccRoot = root; ccObs = null;
+    if (root) {
+      ccObs = new MutationObserver(ccChanged);
+      ccObs.observe(root, { childList: true, subtree: true, characterData: true });
+    }
+    ccLast = null;
+    ccChanged();
+  }
+
+  // ---- YouTube grotuvo nustatymai programos ⋮ meniu ----
+  // Viso ekrano režime paties YouTube meniu nepasiekiamas, todėl subtitrus, garso takelį,
+  // kartojimą ir „Stable volume“ programa valdo per grotuvo API. Sąrašai grąžinami eilutėmis:
+  // pirmas simbolis '*' = pasirinktas, ' ' = ne; eilutė '>' = siūlomas vertimas.
+  var ccTracks = [], ccTrs = [], auTracks = [];
+
+  function ytp() {
+    return document.getElementById('movie_player') || document.querySelector('.html5-video-player');
+  }
+
+  function ccCurrent(p) {
+    try { return p.getOption('captions', 'track') || {}; } catch (e) { return {}; }
+  }
+
+  // langs – telefono kalbų kodai (pvz. ['en','lt']): kiekvienai, kurios takelio nėra, siūlomas vertimas.
+  function ccList(langs, done) {
+    var p = ytp(), n = 0;
+    langs = langs || [];
+    if (!p || !p.getOption) { done(''); return; }
+    try { if (p.loadModule) p.loadModule('captions'); } catch (e) {}
+    (function read() {
+      var l = [];
+      try { l = p.getOption('captions', 'tracklist', { includeAsr: true }) || []; } catch (e) {}
+      if (!l.length && n++ < 8) { setTimeout(read, 150); return; }
+      // Telefono kalbų takeliai sąrašo viršuje (sąrašas gali būti ilgas).
+      var rank = function (t) {
+        var c = String(t.languageCode || ''), r = langs.indexOf(c);
+        if (r < 0) r = langs.indexOf(c.split('-')[0]);
+        return r < 0 ? langs.length : r;
+      };
+      l = l.map(function (t, i) { return { t: t, i: i }; })
+        .sort(function (a, b) { return (rank(a.t) - rank(b.t)) || (a.i - b.i); })
+        .map(function (x) { return x.t; });
+      ccTracks = l; ccTrs = [];
+      var cur = ccCurrent(p), on = !!cur.languageCode;
+      var tr = (on && cur.translationLanguage && cur.translationLanguage.languageCode) || '';
+      var out = [], have = {}, canTr = false;
+      for (var i = 0; i < l.length; i++) {
+        var t = l[i];
+        have[t.languageCode] = 1;
+        have[String(t.languageCode || '').split('-')[0]] = 1;
+        if (t.is_translateable) canTr = true;
+        var sel = on && !tr && t.languageCode === cur.languageCode &&
+          (t.kind || '') === (cur.kind || '') && (t.name || '') === (cur.name || '');
+        out.push((sel ? '*' : ' ') + (t.displayName || t.languageName || t.languageCode));
+      }
+      // Vertimas į telefono kalbas, kurių takelio nėra.
+      if (canTr && langs.length) {
+        var tl = [];
+        try { tl = p.getOption('captions', 'translationLanguages') || []; } catch (e) {}
+        for (var k = 0; k < langs.length; k++) {
+          if (have[langs[k]]) continue;
+          have[langs[k]] = 1;
+          for (var j = 0; j < tl.length; j++) {
+            if (tl[j].languageCode !== langs[k]) continue;
+            ccTrs.push(tl[j]);
+            out.push('>' + (tr === langs[k] ? '*' : ' ') + tl[j].languageName);
+            break;
+          }
+        }
+      }
+      done(out.join('\n'));
+    })();
+  }
+
+  // i: -1 – išjungti; -2, -3… – vertimas (pirmas, antras… iš ccList); kitaip takelio numeris.
+  function ccSet(i) {
+    var p = ytp();
+    if (!p || !p.setOption) return false;
+    try {
+      if (i === -1) { p.setOption('captions', 'track', {}); return true; }
+      var t = ccTracks[i];
+      if (i <= -2) {
+        var ccTr = ccTrs[-2 - i];
+        if (!ccTr) return false;
+        var cur = ccCurrent(p), base = null;
+        for (var k = 0; k < ccTracks.length && !base; k++) {
+          if (ccTracks[k].languageCode === cur.languageCode && ccTracks[k].is_translateable) base = ccTracks[k];
+        }
+        for (var m = 0; m < ccTracks.length && !base; m++) if (ccTracks[m].is_translateable) base = ccTracks[m];
+        if (!base) return false;
+        t = {};
+        for (var key in base) t[key] = base[key];
+        t.translationLanguage = ccTr;
+      }
+      if (!t) return false;
+      p.setOption('captions', 'track', t);
+      return true;
+    } catch (e) { return false; }
+  }
+
+  function auInfo(t) {
+    try { return t.getLanguageInfo() || {}; } catch (e) { return {}; }
+  }
+
+  function auList(done) {
+    var p = ytp(), l = [], cur = null;
+    try { l = (p.getAvailableAudioTracks() || []).slice(); cur = p.getAudioTrack(); } catch (e) {}
+    // Originalas pirmas: automatiškai įgarsintų takelių gali būti dvidešimt.
+    l.sort(function (a, b) { return (auInfo(b).isDefault ? 1 : 0) - (auInfo(a).isDefault ? 1 : 0); });
+    auTracks = l;
+    var ci = cur ? auInfo(cur).id : null, out = [];
+    for (var i = 0; i < l.length; i++) {
+      var x = auInfo(l[i]);
+      out.push((ci != null && x.id === ci ? '*' : ' ') + (x.name || x.id || ('Track ' + (i + 1))));
+    }
+    done(out.join('\n'));
+  }
+
+  function auSet(i) {
+    var p = ytp();
+    try {
+      if (!p || !auTracks[i]) return false;
+      p.setAudioTrack(auTracks[i]);
+      return true;
+    } catch (e) { return false; }
+  }
+
+  // Bitai: 1 – kartojimas įjungtas, 2 – video turi „Stable volume“ takelį, 4 – „Stable volume“ įjungtas.
+  function playerState() {
+    var p = ytp(), s = 0;
+    try { if (p.getLoopVideo()) s |= 1; } catch (e) {}
+    try {
+      if (p.hasDrcAudioTrack()) {
+        s |= 2;
+        if (Number(p.getDrcUserPreference()) === 1) s |= 4;
+      }
+    } catch (e) {}
+    return s;
   }
 
   function ensureStyle() {
@@ -65,7 +261,14 @@
       '#xf-delay-ui .xf-label{min-width:84px;text-align:center;padding:0 4px}' +
       '#xf-delay-ui .xf-meas{font:600 15px/1 sans-serif;padding:0 4px}#xf-delay-ui .xf-meas:empty{display:none}' +
       '#xf-delay-ui:not(.xf-open) .xf-meas.xf-quiet{display:none}' +
-      '#xf-delay-ui button.xf-auto-on{background:rgba(60,170,90,.85)}';
+      '#xf-delay-ui button.xf-auto-on{background:rgba(60,170,90,.85)}' +
+      // Subtitrų eilutė viso ekrano (immersive) režime; kituose režimuose rodo pats YouTube.
+      '#xf-cc{display:none;position:fixed;left:6%;right:6%;bottom:9%;z-index:2147483647;text-align:center;' +
+      'pointer-events:none;font:500 4.6vh/1.4 "YouTube Noto",Roboto,Arial,sans-serif;color:#fff}' +
+      'html.fermata-yt-immersive #xf-cc.xf-cc-on{display:block}' +
+      '#xf-cc,#xf-cc *{visibility:visible!important}' +
+      '#xf-cc span{background:rgba(8,8,8,.75);padding:.1em .4em;' +
+      '-webkit-box-decoration-break:clone;box-decoration-break:clone}';
     document.documentElement.appendChild(s);
   }
 
@@ -567,7 +770,8 @@
     }
     if (!ui) buildUi();
     if (ui.parentElement !== parent) parent.appendChild(ui);
-    geomAt = 0;                          // kitame draw() perskaičiuoti vietą
+    ccAttach(parent);
+    geomAt = 0;                         // kitame draw() perskaičiuoti vietą
     updateGeom(performance.now());
   }
 
@@ -736,6 +940,14 @@
     // Testui: paduoti auto režimui matavimo rezultatą {ms, ok, conf, ratio} be mikrofono.
     _autoResult: function (res, err, fast) { autoResult(res, err, fast); },
     setOffset: function (v) { setOffset(v); updateDiag(); return micOffset; },
+    // Programos ⋮ meniu: subtitrai, garso takelis, kartojimas, „Stable volume“.
+    ccList: function (lang, done) { ccList(lang, done); },
+    ccSet: function (i) { return ccSet(i); },
+    auList: function (done) { auList(done); },
+    auSet: function (i) { return auSet(i); },
+    playerState: function () { return playerState(); },
+    setLoop: function (on) { try { ytp().setLoopVideo(!!on); return true; } catch (e) { return false; } },
+    setDrc: function (on) { try { ytp().setDrcUserPreference(on ? 1 : 0); return true; } catch (e) { return false; } },
     // Diagnostika: kiek ms rodomas kadras atsilieka nuo grojamo video (turi būti ≈ delayMs)
     lag: function () {
       return shown && video ? Math.round((video.currentTime - shown.mt) * 1000) : null;

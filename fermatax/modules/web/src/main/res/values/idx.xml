@@ -10,4 +10,8 @@
     <item name="video_scaling_fill_proportional" type="id" />
     <item name="video_quality" type="id" />
     <item name="yt_auto_fullscreen" type="id" />
+    <item name="xf_subtitles" type="id" />
+    <item name="xf_audio_track" type="id" />
+    <item name="xf_loop" type="id" />
+    <item name="xf_stable_volume" type="id" />
 </resources>
