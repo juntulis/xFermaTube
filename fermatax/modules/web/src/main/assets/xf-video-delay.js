@@ -292,7 +292,7 @@
   }
 
   // ---- Auto režimas ----
-  // 🎤 matuoja pats: naujam video po ~5 s (greitas startas), po pauzės ~20 s, po užstrigimo
+  // 🎤 matuoja pats: naujam video po ~10 s (greitas startas), po pauzės ~20 s, po užstrigimo
   // (waiting → playing) ir kas AUTO_EVERY_MS.
   // Vienas matavimas turi ±20–30 ms triukšmo, todėl:
   //  - didelis pokytis (> BIG_MS, pvz. po užstrigimo) taikomas, kai du matavimai iš eilės sutampa (±AGREE_MS);
@@ -307,7 +307,7 @@
   var CAND_TTL_MS = 120000;                    // tiek galioja didelio pokyčio kandidatas
   // Greitas startas: pirmas naujo video matavimas prasideda po AUTO_FAST_MS, trunka FAST_SEC, o aiškus
   // rezultatas (FAST_CONF, FAST_RATIO) taikomas iškart. Toliau įprasti matavimai jį patikslina mediana.
-  var AUTO_FAST_MS = 5000, FAST_SEC = 6, FAST_CONF = 0.45, FAST_RATIO = 1.8;
+  var AUTO_FAST_MS = 10000, FAST_SEC = 6, FAST_CONF = 0.45, FAST_RATIO = 1.8;
   var AUTO_CONFIRM_MS = 3000, AUTO_RETRY_MS = 30000, LEARN_MS = 10 * 60000;
   var FINE_MS = 12, BIG_MS = 60, AGREE_MS = 40, RAMP_STEP = 20, RECENT_N = 5, MIN_FOR_FINE = 3;
   var BIG_CONF = 0.35, BIG_RATIO = 1.5;
