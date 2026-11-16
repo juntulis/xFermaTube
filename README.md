@@ -8,6 +8,17 @@
   A lightweight YouTube player for Android Auto that fixes the audio delay automatically, using the phone's microphone.
 </p>
 
+<p align="center">
+  <b><a href="../../releases/latest">⬇ Download the latest APK</a></b> · <a href="#install">Full install guide</a>
+</p>
+
+> [!IMPORTANT]
+> **Quick install**
+> 1. **Don't open the APK directly.** Install it through **AAenabler** or **KingInstaller** (with Play Store as the install source). Otherwise Android Auto may show only the audio entry and hide the video app.
+> 2. On the phone: Android Auto settings → tap **Version** 10 times → ⋮ → **Developer settings** → tick **Unknown sources**.
+> 3. Open xFermaTube on the phone once and allow the **microphone**.
+> 4. In the car, open **xFermaTube** (play icon), not *xF Audio* (speaker icon).
+
 ---
 
 ## The problem
@@ -46,12 +57,36 @@ I built this to fix one annoying problem for myself, not to make money or collec
 
 ## Install
 
-1. Download the APK from [Releases](../../releases).
-2. Sideload it so that Android Auto accepts it, for example with **AAenabler** or **KingInstaller**. Then turn on *Unknown sources* in Android Auto developer settings.
-3. Open xFermaTube on the phone once and allow the **microphone** when it asks. The car screen can't show this request. You can also grant it later: Settings → Apps → xFermaTube → Permissions → Microphone.
-4. Optional: open xFermaTube on the phone and sign in to YouTube (avatar → Sign in).
+Android Auto only shows video apps that look like they came from the Play Store, so the APK has to be installed with a helper app. Opening the APK from the browser or a file manager is not enough.
 
-In the car, tap the faint **⏱ X ms** label at the top left of the video to see the controls:
+1. **Turn on Unknown sources in Android Auto.** On the phone: Android Auto settings → scroll down and tap **Version** 10 times → **⋮** (top right) → **Developer settings** → tick **Unknown sources**.
+2. **Download the APK** from [Releases](../../releases/latest) (arm64 phones only).
+3. **Install it through AAenabler or KingInstaller**, not by opening the file. In KingInstaller choose Play Store as the install source.
+4. **Open xFermaTube on the phone once** and allow the **microphone** when it asks. The car screen can't show this request. You can also grant it later: Settings → Apps → xFermaTube → Permissions → Microphone.
+5. **Connect to the car and open xFermaTube** from the Android Auto app list.
+6. Optional: open xFermaTube on the phone and sign in to YouTube (avatar → Sign in). The car uses the same session.
+
+To update, install the new APK over the old one the same way. Your settings are kept.
+
+### Two icons in Android Auto
+
+- **xFermaTube** (play icon): the video app. This is the one you want.
+- **xF Audio** (speaker icon): audio only, for the media card and steering wheel controls. In v1.0.0 it was called *xFermaTube Audio* and had the same icon as the video app.
+
+### Only the audio entry shows up?
+
+Then Android Auto is hiding the video app. This usually comes from the way the APK was installed:
+
+1. Uninstall xFermaTube and install it again **through** AAenabler or KingInstaller (step 3 above).
+2. Check that **Unknown sources** is ticked (step 1 above).
+3. Force stop Android Auto and reconnect to the car.
+4. On the phone, open Android Auto settings → **Customize launcher** and check that xFermaTube is ticked.
+
+If the original FermataX doesn't show its video app in your car either, the problem is in the Android Auto setup, not in this app.
+
+## Using it in the car
+
+Tap the faint **⏱ X ms** label at the top left of the video to see the controls:
 
 - **−100 / −10 / +10 / +100** adjust the delay by hand.
 - **🎤** measures the delay once.
