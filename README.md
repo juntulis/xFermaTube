@@ -18,6 +18,7 @@
 > 2. On the phone: Android Auto settings → tap **Version** 10 times → ⋮ → **Developer settings** → tick **Unknown sources**.
 > 3. Open xFermaTube on the phone once and allow the **microphone**.
 > 4. In the car, open **xFermaTube** (play icon), not *xF Audio* (speaker icon).
+> 5. **Sync is not instant.** The app has to listen first: give each new video about 10–20 seconds before sound and picture line up.
 
 ---
 
@@ -109,6 +110,8 @@ So try AAenabler first, use this when AAenabler is not an option, and please tel
 Xiaomi / HyperOS: if step 5 fails, turn on **Install via USB** in Developer options and tap **Try again**.
 
 ## Using it in the car
+
+**Sync is not instant.** The app can't know the delay in advance: it has to hear the car's speakers through the phone's microphone and compare that with the video's soundtrack. For each new video expect about 10–20 seconds before sound and picture line up. It can take longer when the audio is quiet, the car is noisy, or the music is very rhythmic. Until then the video uses the delay from the previous video. The sound must be audible in the cabin: with the volume at zero there is nothing to measure.
 
 Tap the faint **⏱ X ms** label at the top left of the video to see the controls:
 
