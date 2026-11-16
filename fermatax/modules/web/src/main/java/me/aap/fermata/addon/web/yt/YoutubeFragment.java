@@ -684,7 +684,7 @@ public class YoutubeFragment extends WebBrowserFragment
 			// xFermaTube: telefone nėra šoninio meniu, todėl nustatymai pasiekiami iš viršutinės juostos.
 			if (me.aap.fermata.xf.XfConfig.YOUTUBE_ONLY &&
 					!MainActivityDelegate.get(tb.getContext()).isCarActivity()) {
-				ImageButton settings = addButton(tb, me.aap.fermata.R.drawable.settings, this,
+				ImageButton settings = addButton(tb, me.aap.fermata.R.drawable.xf_settings, this,
 						R.id.xf_settings);
 				settings.setMinimumWidth(minSize);
 				settings.setMinimumHeight(minSize);

@@ -81,6 +81,10 @@ public final class TopBarController {
 				!context.usePlaybackTitle(snapshot)) playbackOwnerFragmentId = 0;
 		boolean isPrimaryRoot = PhoneRootPolicy.isPrimaryRoot(activity.getRuntimeHostMode(),
 				activity.getPhoneRootId(), fragment.getFragmentId()) && fragment.isRootPage();
+		// xFermaTube: vienintelis šakninis puslapis yra YouTube, todėl nustatymuose „Atgal“ rodoma
+		// visada (telefone nustatymai buvo laikomi šaknimi ir rodyklė dingdavo).
+		if (me.aap.fermata.xf.XfConfig.YOUTUBE_ONLY &&
+				(fragment.getFragmentId() != me.aap.fermata.R.id.youtube_fragment)) isPrimaryRoot = false;
 		return TopBarPolicy.resolve(activity.getRuntimeHostMode(),
 				isPrimaryRoot,
 				fragment.getFragmentId(),

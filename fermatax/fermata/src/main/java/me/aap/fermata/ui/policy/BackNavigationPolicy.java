@@ -89,6 +89,12 @@ public final class BackNavigationPolicy {
 			a.finish();
 			return;
 		}
+		// xFermaTube telefone: iš bet kurio kito puslapio (nustatymų) „Atgal“ grįžta į YouTube.
+		// Be šito telefono šaknų logika nustatymus laikė šakniniu puslapiu ir grįžti nebuvo kaip.
+		if (me.aap.fermata.xf.XfConfig.YOUTUBE_ONLY && (f != null) && !a.isCarActivity()) {
+			a.showPrimaryRoot();
+			return;
+		}
 		boolean phoneRoots = PhoneRootPolicy.usesPhoneRoots(a.getRuntimeHostMode());
 		int navId = (f == null) ? ID_NULL :
 				(phoneRoots ? a.getPhoneRootId() : a.getActiveNavItemId());

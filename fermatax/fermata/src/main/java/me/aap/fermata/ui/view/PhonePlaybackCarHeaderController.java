@@ -132,6 +132,9 @@ public final class PhonePlaybackCarHeaderController implements FermataServiceUiB
 	}
 
 	static int resolveVisibility(RuntimeHostMode hostMode, boolean barsHidden) {
+		// xFermaTube: „AA disconnected / Open on car“ juosta YouTube-only versijoje nieko naudingo
+		// nedaro (video atidaromas automobilio ekrane), tik užima vietą ir klaidina.
+		if (me.aap.fermata.xf.XfConfig.YOUTUBE_ONLY) return GONE;
 		return (!barsHidden && (hostMode == RuntimeHostMode.PHONE)) ? VISIBLE : GONE;
 	}
 
