@@ -79,7 +79,7 @@ Then Android Auto is hiding the video app. This usually comes from the way the A
 
 1. Uninstall xFermaTube and install it again **through AAenabler** (step 3 above).
 2. **Check the install source** (v1.0.2 and later): open xFermaTube on the phone → gear icon in the top bar → **Android Auto install check**. *Installer* must be `com.android.vending (Google Play Store)`, which is what AAenabler sets. With another installer Android Auto most likely hides the video app.
-3. Not Google Play Store? **Fix it on the phone**: tap **Fix now** in the install check (the app also offers it at start when it sees another installer). The app pairs with the phone's own *Wireless debugging* and reinstalls itself with the right install source. Your settings are kept and no PC is needed. It needs Android 11 or later, Wi‑Fi and Developer options; the steps are shown on screen, and the pairing code is typed into an xFermaTube notification. On Xiaomi / HyperOS also turn on *Install via USB* in Developer options.
+3. Not Google Play Store? **Fix it on the phone** with **Fix now**: see [the steps below](#fix-the-install-source-on-the-phone).
 4. Or install from a PC: `adb install -r -i com.android.vending xFermaTube-v1.0.2-arm64.apk`
 5. Check that **Unknown sources** is ticked (step 1 above).
 6. Force stop Android Auto and reconnect to the car.
@@ -88,6 +88,19 @@ Then Android Auto is hiding the video app. This usually comes from the way the A
 If the original FermataX doesn't show its video app in your car either, the problem is in the Android Auto setup, not in this app.
 
 When you ask for help, tap **Copy** in the install check and paste the report: it contains no personal data (app version, phone model, Android Auto version, install source).
+
+### Fix the install source on the phone
+
+For v1.0.2 and later, Android 11 or later. No PC needed, your settings are kept.
+
+1. Download the latest APK and install it over the old version (just open the file).
+2. Open xFermaTube on the phone and tap **Fix now**. If it doesn't ask: gear icon → **Android Auto install check** → **Fix now**.
+3. Tap **Open Developer options** → **Wireless debugging** (needs Wi‑Fi) → **Pair device with pairing code**.
+4. An xFermaTube notification pops up. Type the 6‑digit code into it. Stay on the Settings screen while the code is shown. No notification? Pull the notification shade down.
+5. The app reinstalls itself and opens again with *Install source fixed*.
+6. Connect to the car and open xFermaTube on the car screen.
+
+Xiaomi / HyperOS: if step 5 fails, turn on **Install via USB** in Developer options and tap **Try again**.
 
 ## Using it in the car
 
