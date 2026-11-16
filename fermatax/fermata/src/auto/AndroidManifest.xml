@@ -156,6 +156,15 @@
             android:name="me.app.fermatax.auto.carapps.adb.AdbPairing$Receiver"
             android:exported="false" />
 
+        <!-- xFermaTube: "Fix install source" (reinstall through the phone's own Wireless debugging) -->
+        <activity
+            android:name="me.app.fermatax.auto.xf.XfInstallFixActivity"
+            android:exported="false" />
+
+        <receiver
+            android:name="me.app.fermatax.auto.xf.XfInstallFixer$Receiver"
+            android:exported="false" />
+
         <!-- Not exported: BOOT_COMPLETED and MY_PACKAGE_REPLACED come from the system, which may start a
              non-exported receiver of the app; nothing else can reach it. -->
         <receiver

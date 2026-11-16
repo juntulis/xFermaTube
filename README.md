@@ -61,7 +61,7 @@ Android Auto only shows video apps that look like they came from the Play Store,
 
 1. **Turn on Unknown sources in Android Auto.** On the phone: Android Auto settings → scroll down and tap **Version** 10 times → **⋮** (top right) → **Developer settings** → tick **Unknown sources**.
 2. **Download the APK** from [Releases](../../releases/latest) (arm64 phones only).
-3. **Install it through AAenabler**, not by opening the file: open AAenabler and pick the APK from inside it. **AAenabler is the recommended installer**: it is the one I use, and every release is tested with it. KingInstaller (the installer FermataX suggests, with Play Store as the install source) is an alternative I have not tested myself.
+3. **Install it through [AAenabler](https://github.com/malebuffy/AAEnabler)**, not by opening the file: open AAenabler and pick the APK from inside it. **AAenabler is the recommended installer**: it is the one I use, and every release is tested with it. KingInstaller (the installer FermataX suggests, with Play Store as the install source) is an alternative I have not tested myself.
 4. **Open xFermaTube on the phone once** and allow the **microphone** when it asks. The car screen can't show this request. You can also grant it later: Settings → Apps → xFermaTube → Permissions → Microphone.
 5. **Connect to the car and open xFermaTube** from the Android Auto app list.
 6. Optional: open xFermaTube on the phone and sign in to YouTube (avatar → Sign in). The car uses the same session.
@@ -79,10 +79,11 @@ Then Android Auto is hiding the video app. This usually comes from the way the A
 
 1. Uninstall xFermaTube and install it again **through AAenabler** (step 3 above).
 2. **Check the install source** (v1.0.2 and later): open xFermaTube on the phone → gear icon in the top bar → **Android Auto install check**. *Installer* must be `com.android.vending (Google Play Store)`, which is what AAenabler sets. With another installer Android Auto most likely hides the video app.
-3. Still not Google Play Store after installing through AAenabler? Then the phone's own installer ignores the request (reported on Xiaomi / HyperOS). Install from a PC instead: `adb install -r -i com.android.vending xFermaTube-v1.0.2-arm64.apk`
-4. Check that **Unknown sources** is ticked (step 1 above).
-5. Force stop Android Auto and reconnect to the car.
-6. On the phone, open Android Auto settings → **Customize launcher** and check that xFermaTube is ticked.
+3. Not Google Play Store? **Fix it on the phone**: tap **Fix now** in the install check (the app also offers it at start when it sees another installer). The app pairs with the phone's own *Wireless debugging* and reinstalls itself with the right install source. Your settings are kept and no PC is needed. It needs Android 11 or later, Wi‑Fi and Developer options; the steps are shown on screen, and the pairing code is typed into an xFermaTube notification. On Xiaomi / HyperOS also turn on *Install via USB* in Developer options.
+4. Or install from a PC: `adb install -r -i com.android.vending xFermaTube-v1.0.2-arm64.apk`
+5. Check that **Unknown sources** is ticked (step 1 above).
+6. Force stop Android Auto and reconnect to the car.
+7. Look for the app on the **car screen**, not in the phone's *Customize launcher* list: without a connected car that list may show only *xF Audio* even when everything is fine.
 
 If the original FermataX doesn't show its video app in your car either, the problem is in the Android Auto setup, not in this app.
 

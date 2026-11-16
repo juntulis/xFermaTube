@@ -34,7 +34,7 @@ import me.aap.utils.log.Log;
  */
 public final class XfInstallReport {
 	private static final String AA_PKG = "com.google.android.projection.gearhead";
-	private static final String PLAY_STORE = "com.android.vending";
+	private static final String PLAY_STORE = XfInstallFix.PLAY_STORE;
 	private static final String PROJECTION =
 			"com.google.android.gms.car.category.CATEGORY_PROJECTION";
 
@@ -44,11 +44,14 @@ public final class XfInstallReport {
 	public static void show(MainActivityDelegate a) {
 		Context ctx = a.getContext();
 		String text = build(ctx);
+		// Three buttons at most: with a wrong install source "Fix now" takes the place of Close
+		boolean fix = XfInstallFix.needed(ctx) && XfInstallFix.available(ctx);
 		try {
 			a.createDialogBuilder()
 					.setTitle(R.string.xf_aa_check)
 					.setMessage(text)
-					.setNegativeButton(R.string.xf_close, null)
+					.setNegativeButton(fix ? R.string.xf_fix_now : R.string.xf_close,
+							fix ? (d, w) -> XfInstallFix.open(ctx) : null)
 					.setNeutralButton(R.string.xf_share, (d, w) -> share(ctx, text))
 					.setPositiveButton(android.R.string.copy, (d, w) -> copy(ctx, text))
 					.show();
@@ -158,16 +161,23 @@ public final class XfInstallReport {
 		// AAenabler), Installer = com.android.vending, Initiated by = sisteminis diegiklis.
 		if (PLAY_STORE.equals(installer)) {
 			b.append("\nRESULT: the install source is Google Play Store, as on a phone where the " +
-					"video app shows up. If Android Auto still shows only the audio entry, the cause " +
-					"is somewhere else.\n");
+					"video app shows up. Look for the video app on the car screen: the Customize " +
+					"launcher list on the phone may not show it while no car is connected. If the car " +
+					"screen still shows only the audio entry, the cause is somewhere else.\n");
 		} else {
 			b.append("\nRESULT: the installer is not Google Play Store. On a phone where the video " +
 					"app shows up it is com.android.vending, so this is the most likely reason why " +
 					"Android Auto hides the video app.\n" +
-					"1. Uninstall, then install through AAenabler: open AAenabler and pick the APK " +
-					"from inside it. Run this check again.\n" +
-					"2. Still not Google Play Store? Then the phone's own installer ignores the " +
-					"request (reported on Xiaomi / HyperOS). Install from a PC instead:\n" +
+					(XfInstallFix.available(ctx) ?
+							"1. Tap Fix now: the app reinstalls itself with the right install source " +
+									"through the phone's Wireless debugging.\n" +
+									"2. Or uninstall, then install through AAenabler: open AAenabler and pick " +
+									"the APK from inside it. Run this check again.\n" :
+							"1. Uninstall, then install through AAenabler: open AAenabler and pick the APK " +
+									"from inside it. Run this check again.\n" +
+									"2. Still not Google Play Store? Then the phone's own installer ignores " +
+									"the request.\n") +
+					"3. Or install from a PC:\n" +
 					"   adb install -r -i com.android.vending xFermaTube.apk\n");
 		}
 		b.append("\nNot readable by the app, check by hand: Android Auto settings > Developer " +

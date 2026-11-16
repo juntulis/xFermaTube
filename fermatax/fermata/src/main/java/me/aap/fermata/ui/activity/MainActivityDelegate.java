@@ -286,7 +286,8 @@ public class MainActivityDelegate extends ActivityDelegate
 		init();
 
 		AddonManager.get().onActivityCreate(this);
-		xfAskMicrophoneOnPhone();
+		// One question per start: the install source first, the microphone on the next start
+		if (!me.aap.fermata.xf.XfInstallFix.checkAtStartup(this)) xfAskMicrophoneOnPhone();
 
 		// Permissions are requested by the feature that needs them. In particular, an Android
 		// Auto activity must never try to launch a phone runtime-permission dialog at startup.

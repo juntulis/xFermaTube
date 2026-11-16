@@ -77,16 +77,25 @@ public final class LocalAdb implements Closeable {
     public FutureSupplier<Void> pair(int port, String code) {
         if (code == null || !code.matches("[0-9]{6}"))
             return failed(new IllegalArgumentException("Invalid pairing code"));
-        return submit(port, code, null);
+        return submit(port, code, null, null);
     }
 
     public FutureSupplier<Void> runAndClose(int port, String command) {
         if (command == null || command.isEmpty() || command.indexOf('\0') >= 0)
             return failed(new IllegalArgumentException("Invalid shell command"));
-        return submit(port, null, "shell:" + command);
+        return submit(port, null, "shell:" + command, null);
     }
 
-    private FutureSupplier<Void> submit(int port, String code, String destination) {
+    /** xFermaTube: like runAndClose, but keeps the first 4096 bytes of the command's output for the caller. */
+    public FutureSupplier<String> runForOutput(int port, String command) {
+        if (command == null || command.isEmpty() || command.indexOf('\0') >= 0)
+            return failed(new IllegalArgumentException("Invalid shell command"));
+        java.io.ByteArrayOutputStream sink = new java.io.ByteArrayOutputStream();
+        return submit(port, null, "shell:" + command, sink)
+                .map(v -> new String(sink.toByteArray(), StandardCharsets.UTF_8));
+    }
+
+    private FutureSupplier<Void> submit(int port, String code, String destination, java.io.OutputStream sink) {
         if (port < 1 || port > 65535) return failed(new IllegalArgumentException("Invalid port"));
         Operation operation = new Operation();
         synchronized (stateLock) {
@@ -96,7 +105,7 @@ public final class LocalAdb implements Closeable {
         try {
             operation.deadline = scheduler.schedule(() -> operation.abort(new TimeoutException()),
                     timeoutMillis, TimeUnit.MILLISECONDS);
-            executor.execute(() -> operation.run(port, code, destination));
+            executor.execute(() -> operation.run(port, code, destination, sink));
         } catch (RuntimeException error) {
             operation.abort(error);
             synchronized (stateLock) { if (active == operation) active = null; }
@@ -196,7 +205,7 @@ public final class LocalAdb implements Closeable {
             result.completeExceptionally(aborted.get());
         }
 
-        void run(int port, String code, String destination) {
+        void run(int port, String code, String destination, java.io.OutputStream sink) {
             worker = Thread.currentThread();
             Throwable failure = null;
             try {
@@ -208,7 +217,7 @@ public final class LocalAdb implements Closeable {
                         if (code != null) {
                             if (!transport.pair(port, code)) throw new AdbPairingRequiredException("ADB pairing is required");
                         }
-                        else transport.run(port, destination);
+                        else transport.run(port, destination, sink);
                     }
                 }
             } catch (AdbAuthenticationFailedException error) {
@@ -237,6 +246,10 @@ public final class LocalAdb implements Closeable {
     interface Transport extends Closeable {
         boolean pair(int port, String code) throws Exception;
         void run(int port, String destination) throws Exception;
+        /** xFermaTube: a transport that cannot keep the output just runs the command. */
+        default void run(int port, String destination, java.io.OutputStream sink) throws Exception {
+            run(port, destination);
+        }
     }
     interface TransportFactory {
         Transport create(String host, Socket socket, PrivateKey key, Certificate certificate,
@@ -289,11 +302,23 @@ public final class LocalAdb implements Closeable {
                     key, certificate, getDeviceName(), socket, timeout);
         }
         @Override public void run(int port, String destination) throws Exception {
+            run(port, destination, null);
+        }
+        @Override public void run(int port, String destination, java.io.OutputStream sink) throws Exception {
             if (!connect(port)) throw new TimeoutException();
             try (AdbStream stream = openStream(destination)) {
                 byte[] discard = new byte[1024];
+                int kept = 0;
+                int n;
                 // Read the stream directly: -1 only for peer close, local/transport closure throws.
-                while (stream.read(discard, 0, discard.length) != -1) { /* Drain without retaining output. */ }
+                while ((n = stream.read(discard, 0, discard.length)) != -1) {
+                    // Drain; only a caller that asked for the output keeps a bounded part of it.
+                    if (sink != null && n > 0 && kept < 4096) {
+                        int keep = Math.min(n, 4096 - kept);
+                        sink.write(discard, 0, keep);
+                        kept += keep;
+                    }
+                }
             }
         }
         @Override public void close() throws IOException { disconnect(); }
