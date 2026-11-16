@@ -14,7 +14,7 @@
 
 > [!IMPORTANT]
 > **Quick install**
-> 1. **Don't open the APK directly.** Install it through **AAenabler** or **KingInstaller** (with Play Store as the install source). Otherwise Android Auto may show only the audio entry and hide the video app.
+> 1. **Don't open the APK directly.** Install it through **AAenabler** (recommended: it is the installer I use and test with). Otherwise Android Auto may show only the audio entry and hide the video app.
 > 2. On the phone: Android Auto settings → tap **Version** 10 times → ⋮ → **Developer settings** → tick **Unknown sources**.
 > 3. Open xFermaTube on the phone once and allow the **microphone**.
 > 4. In the car, open **xFermaTube** (play icon), not *xF Audio* (speaker icon).
@@ -61,7 +61,7 @@ Android Auto only shows video apps that look like they came from the Play Store,
 
 1. **Turn on Unknown sources in Android Auto.** On the phone: Android Auto settings → scroll down and tap **Version** 10 times → **⋮** (top right) → **Developer settings** → tick **Unknown sources**.
 2. **Download the APK** from [Releases](../../releases/latest) (arm64 phones only).
-3. **Install it through AAenabler or KingInstaller**, not by opening the file. In KingInstaller choose Play Store as the install source.
+3. **Install it through AAenabler**, not by opening the file: open AAenabler and pick the APK from inside it. **AAenabler is the recommended installer**: it is the one I use, and every release is tested with it. KingInstaller (the installer FermataX suggests, with Play Store as the install source) is an alternative I have not tested myself.
 4. **Open xFermaTube on the phone once** and allow the **microphone** when it asks. The car screen can't show this request. You can also grant it later: Settings → Apps → xFermaTube → Permissions → Microphone.
 5. **Connect to the car and open xFermaTube** from the Android Auto app list.
 6. Optional: open xFermaTube on the phone and sign in to YouTube (avatar → Sign in). The car uses the same session.
@@ -77,7 +77,8 @@ To update, install the new APK over the old one the same way. Your settings are 
 
 Then Android Auto is hiding the video app. This usually comes from the way the APK was installed:
 
-1. Uninstall xFermaTube and install it again **through** AAenabler or KingInstaller (step 3 above).
+1. Uninstall xFermaTube and install it again **through AAenabler** (step 3 above).
+   To check how it was installed: phone Settings → Apps → xFermaTube → the install source line at the bottom of the page. On my phone it says *App downloaded from AAEnabler*. If yours names the system package installer, the install did not go through the helper app.
 2. Check that **Unknown sources** is ticked (step 1 above).
 3. Force stop Android Auto and reconnect to the car.
 4. On the phone, open Android Auto settings → **Customize launcher** and check that xFermaTube is ticked.
