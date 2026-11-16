@@ -93,7 +93,11 @@ When you ask for help, tap **Copy** in the install check and paste the report: i
 
 **Experimental.** For v1.0.2 and later, Android 11 or later. No PC needed, your settings are kept.
 
-The app reinstalls itself with Google Play Store as the install source. That part works (confirmed on Samsung and Xiaomi), and the Android Auto desktop simulator then shows the video app. In my first car test the video app still did not show up, and it appeared after I reinstalled through AAenabler. I haven't found out why yet. So try AAenabler first, use this when AAenabler is not an option, and please tell me whether it helped in your car.
+The app reinstalls itself with Google Play Store as the install source. That part works (confirmed on Samsung and Xiaomi), and the Android Auto desktop simulator then shows the video app. In my first car test the video app still did not show up, and it appeared after I reinstalled through AAenabler. I haven't found out why yet.
+
+It needs Wi‑Fi: any network will do, for example home Wi‑Fi or another phone's hotspot, and internet is not required. No Wi‑Fi? Do the same from a PC over a USB cable, with USB debugging turned on: `adb install -r -i com.android.vending xFermaTube-v1.0.2-arm64.apk`
+
+So try AAenabler first, use this when AAenabler is not an option, and please tell me whether it helped in your car.
 
 1. Download the latest APK and install it over the old version (just open the file).
 2. Open xFermaTube on the phone and tap **Fix now**. If it doesn't ask: gear icon → **Android Auto install check** → **Fix now**.
