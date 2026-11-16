@@ -37,7 +37,10 @@ final class AddonPrefsBuilder
 		if (closed) return;
 		this.set = set;
 
-		set.addBooleanPref(o -> {
+		// xFermata: YouTube-only versijoje YouTube išjungti negalima (programa neturėtų ką rodyti).
+		boolean xfOnly = me.aap.fermata.xf.XfConfig.YOUTUBE_ONLY &&
+				me.aap.fermata.xf.XfConfig.YOUTUBE_ADDON_CLASS.equals(info.className);
+		if (!xfOnly) set.addBooleanPref(o -> {
 			o.title = R.string.enable;
 			o.pref = info.enabledPref;
 			o.store = store;

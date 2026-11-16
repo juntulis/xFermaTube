@@ -363,7 +363,9 @@ class YoutubeMediaEngine implements MediaEngine, OverlayMenu.SelectionHandler {
 			if (a == null) return;
 			var cp = a.getControlPanel();
 			if (cp == null) return;
-			if (a.isGlassTheme() && cp.isVideoControlsVisible() && (System.currentTimeMillis() - cp.getLastControlsShowTimestamp() >= 500)) {
+			// xFermaTube: a tap only shows or hides the control panel; pause is the panel button.
+			if (!me.aap.fermata.xf.XfConfig.YOUTUBE_ONLY && a.isGlassTheme() && cp.isVideoControlsVisible() &&
+					(System.currentTimeMillis() - cp.getLastControlsShowTimestamp() >= 500)) {
 				a.getMediaServiceBinder().onPlayPauseButtonClick();
 			} else {
 				cp.onTouch(null);

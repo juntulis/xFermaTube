@@ -85,6 +85,8 @@ public interface MainActivityPrefs
 	Pref<BooleanSupplier> INITIAL_SETUP_COMPLETED =
 			Pref.b("INITIAL_SETUP_COMPLETED", false);
 	Pref<IntSupplier> INITIAL_SETUP_VERSION = Pref.i("INITIAL_SETUP_VERSION", 0);
+	/** xFermaTube: the microphone explanation was answered once on the phone. */
+	Pref<BooleanSupplier> XF_MIC_ASKED = Pref.b("XF_MIC_ASKED", false);
 
 	int GLASS_APPEARANCE_DAY = 0;
 	int GLASS_APPEARANCE_NIGHT = 1;
@@ -142,6 +144,9 @@ public interface MainActivityPrefs
 
 	/** Phone and car use the same theme; {@code auto} is kept for callers. */
 	default int getThemePref(boolean auto) {
+		// xFermata: YouTube-only versijoje tik Glass tema – tik joje yra šoninė juosta su Home / History /
+		// Back / Refresh / Settings. Kitos temos pasirinkti nebegalima (nustatymas paslėptas).
+		if (me.aap.fermata.xf.XfConfig.YOUTUBE_ONLY) return THEME_GLASS;
 		int theme = getIntPref(THEME_MAIN);
 		return isValidTheme(theme) ? theme : THEME_GLASS;
 	}

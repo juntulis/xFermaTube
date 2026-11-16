@@ -836,9 +836,14 @@ final class YoutubeScripts {
 			"    if (!p || typeof p.getAvailableQualityLevels !== 'function') return false;\n" +
 			"    var levels = p.getAvailableQualityLevels();\n" +
 			"    if (!levels || levels.length === 0) return false;\n" +
+			// xFermata: riba window.__xfMaxQ (pvz. 'hd1080'); lygiai grąžinami nuo aukščiausio.
+			"    var ORDER = ['tiny','small','medium','large','hd720','hd1080','hd1440','hd2160','hd2880','hd4320','highres'];\n" +
+			"    var cap = ORDER.indexOf(window.__xfMaxQ || 'highres');\n" +
 			"    var best = null;\n" +
 			"    for (var i = 0; i < levels.length; i++) {\n" +
-			"      if (levels[i] !== 'auto') { best = levels[i]; break; }\n" +
+			"      if (levels[i] === 'auto') continue;\n" +
+			"      if (cap >= 0 && ORDER.indexOf(levels[i]) > cap) continue;\n" +
+			"      best = levels[i]; break;\n" +
 			"    }\n" +
 			"    if (!best) return false;\n" +
 			"    if (p.getPlaybackQuality && p.getPlaybackQuality() === best) {\n" +

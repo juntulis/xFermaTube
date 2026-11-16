@@ -56,7 +56,7 @@
       '#xf-delay-ui{position:absolute;top:8px;left:8px;z-index:2147483647;display:flex;gap:6px;' +
       'align-items:center;font:600 18px/1 sans-serif;color:#fff;background:rgba(0,0,0,.55);' +
       'border-radius:22px;padding:4px 6px;opacity:.35;transition:opacity .3s;user-select:none}' +
-      '#xf-delay-ui.xf-open{opacity:1}' +
+      '#xf-delay-ui.xf-open{opacity:1}#xf-delay-ui.xf-off{display:none!important}' +
       '#xf-delay-ui button{all:unset;min-width:44px;height:40px;text-align:center;border-radius:20px;' +
       'background:rgba(255,255,255,.18);color:#fff;font:600 16px/40px sans-serif;cursor:pointer}' +
       '#xf-delay-ui .xf-step,#xf-delay-ui .xf-diag{display:none}' +
@@ -89,7 +89,7 @@
     var med = recentMedian(LEARN_MS);
     if (med == null && lastOkMeas && Date.now() - lastOkMeas.at < LEARN_MS) med = lastOkMeas.ms;
     if (med != null) setOffset(med - delayMs);
-    autoCand = null;
+    autoCand = null; stableN = 0;
   }
 
   function openUi(ms) {
@@ -98,9 +98,17 @@
     updateDiag();
     clearTimeout(hideTimer);
     hideTimer = setTimeout(function () {
-      if (measuring) openUi(); else ui.classList.remove('xf-open');   // matuojant neuždarom
+      // Neuždarom tik kol vyksta ranka paleistas matavimas; auto (tylūs) matavimai valdiklio nelaiko.
+      if (measuring && !measQuiet) openUi(); else closeUi();
     }, ms || 4000);
   }
+
+  function closeUi() {
+    clearTimeout(hideTimer);
+    if (ui) ui.classList.remove('xf-open');
+  }
+
+  function isOpen() { return !!ui && ui.classList.contains('xf-open'); }
 
   // ---- 🎤 Delsos matavimas mikrofonu ----
   // Originalus garsas imamas iš <video> (captureStream, grojimo nekeičia), kolonėlių garsas – mikrofonu.
@@ -108,7 +116,7 @@
   // poslinkis = kiek kolonėlės vėluoja nuo originalo.
   // Ieškoma 0–1000 ms: testiniai video pypsi kas 1 s, todėl didesnis langas duotų dviprasmišką rezultatą.
   var MEAS_SEC = 10, BIN_MS = 10, MAX_LAG_MS = 1000;
-  var measuring = false, measOut = null, lastMeas = null, lastOkMeas = null;   // lastOkMeas {ms, at}
+  var measuring = false, measQuiet = false, measOut = null, lastMeas = null, lastOkMeas = null;   // lastOkMeas {ms, at}
 
   // quiet = auto režimo tekstas: matosi tik atidarius valdiklį.
   function showMeas(text, quiet) {
@@ -133,10 +141,10 @@
     var maxLag = Math.round(MAX_LAG_MS / BIN_MS), shift = (r0 - m0) / BIN_MS;
     var iStart = Math.max(0, Math.ceil(-shift)), iEnd = Math.min(refE.length - 1, Math.floor(micE.length - 2 - shift - maxLag));
     var N = iEnd - iStart + 1;
-    if (N < 200) return { err: 'per trumpas įrašas' };
+    if (N < 200) return { err: 'recording too short' };
     var loud = 0;
     for (var i = 0; i < refE.length; i++) loud = Math.max(loud, refE[i]);
-    if (loud < 0.003) return { err: 'video per tylus' };
+    if (loud < 0.003) return { err: 'video too quiet' };
     var a = prep(refE), b = prep(micE), cs = [];
     for (var lag = 0; lag <= maxLag; lag++) {
       var sab = 0, saa = 0, sbb = 0;
@@ -171,37 +179,40 @@
   function measure(opts) {
     opts = opts || {};
     var fake = opts.fakeDelayMs != null, quiet = !!opts.auto;
-    if (measuring) { if (!quiet) showMeas('🎤 jau matuoju…'); return; }
+    if (measuring) { if (!quiet) showMeas('🎤 already measuring…'); return; }
     function fail(err) {
       showMeas('🎤 ' + err, quiet && err !== NO_PERM);   // be leidimo – rodom visada
       if (opts.onDone) opts.onDone(null, err);
     }
-    if (!video) { fail('nėra video'); return; }
-    if (video.paused) { fail('paleisk video'); return; }
+    if (!video) { fail('no video'); return; }
+    if (video.paused) { fail('play a video first'); return; }
     if (!fake && !(window.Fermata && window.Fermata.event)) { fail(NO_APP); return; }
     var ref;
     try {
       var at = (video.captureStream ? video.captureStream() : null);
       at = at && at.getAudioTracks();
-      if (!at || !at.length) { fail('nėra garso'); return; }
+      if (!at || !at.length) { fail('no audio track'); return; }
       ref = new MediaStream([at[0]]);
-    } catch (e) { fail('nepavyko paimti garso'); return; }
+    } catch (e) { fail('cannot capture audio'); return; }
     // AudioContext kuriamas iškart paspaudus (vartotojo gestas). Programoje WebView gesto nereikalauja
     // (setMediaPlaybackRequiresUserGesture(false)), todėl auto režimas gali matuoti ir pats.
     var ac;
     try { ac = new AudioContext(); } catch (e) {
       ref.getTracks().forEach(function (t) { t.stop(); });
-      fail('AudioContext klaida'); return;
+      fail('AudioContext error'); return;
     }
-    measuring = true;
+    measuring = true; measQuiet = quiet;
+    var myVid = vidGen;
     updateLabel();
-    showMeas('🎤 klausau… ' + MEAS_SEC + ' s', quiet);
+    showMeas('🎤 listening… ' + MEAS_SEC + ' s', quiet);
     var proc = null, timer = 0, refDone = false, micRes = null;
     var sr = ac.sampleRate, binN = Math.round(sr * BIN_MS / 1000), epochOff = Date.now() - performance.now();
     var refE = [], fakeE = [], accR = 0, accF = 0, n = 0, samples = 0, r0perf = Infinity;
 
     function done(text, res, err) {
       measuring = false; micCb = null; clearTimeout(timer);
+      // Matuojant pasikeitė video: rezultatas sumaišytas iš dviejų video, netinka.
+      if (res && myVid !== vidGen) { res = null; err = 'video changed'; text = '🎤 video changed'; }
       try { if (proc) proc.disconnect(); } catch (e) {}
       ref.getTracks().forEach(function (t) { t.stop(); });
       ac.close().catch(function () {});
@@ -215,6 +226,8 @@
       }
       updateLabel();
       showMeas(text, quiet && err !== NO_PERM);
+      // Mikrofonas atsakė (pvz. leidimas duotas vėliau): auto režimas, sustojęs dėl leidimo, tęsia.
+      if (res && autoBlocked && !fake) { autoBlocked = false; logAuto('resumed'); autoSchedule(AUTO_EVERY_MS); }
       if (opts.onDone) opts.onDone(res, err);
     }
 
@@ -230,7 +243,7 @@
 
     var startEpoch = Date.now(), myGen = ++measGen;
     micCb = function (res) {
-      res = res || { err: 'tuščias atsakymas' };
+      res = res || { err: 'empty reply' };
       if (!res.err && res.t0 < startEpoch - 1000) return;   // senesnio matavimo pavėlavęs atsakymas
       micRes = res; finish();
     };
@@ -259,7 +272,8 @@
     var mute = ac.createGain(); mute.gain.value = 0;   // procesorius turi būti prijungtas, bet tylus
     merger.connect(proc); proc.connect(mute); mute.connect(ac.destination);
     ac.resume().then(function () {
-      if (!fake) window.Fermata.event(JS_XF_MIC, String(MEAS_SEC + MIC_EXTRA_SEC));
+      // „;ask“ = ranka paleistas matavimas: telefone be leidimo programa parodo leidimo užklausą.
+      if (!fake) window.Fermata.event(JS_XF_MIC, String(MEAS_SEC + MIC_EXTRA_SEC) + (quiet ? '' : ';ask'));
       timer = setTimeout(function () {
         refDone = true;
         if (fake) {
@@ -270,10 +284,10 @@
         }
         finish();
         timer = setTimeout(function () {
-          if (measuring && measGen === myGen) done('🎤 programa neatsakė', null, 'programa neatsakė');
+          if (measuring && measGen === myGen) done('🎤 app did not reply', null, 'app did not reply');
         }, 8000);
       }, MEAS_SEC * 1000);
-    }).catch(function (e) { done('🎤 klaida: ' + (e && e.name), null, 'klaida'); });
+    }).catch(function (e) { done('🎤 error: ' + (e && e.name), null, 'error'); });
   }
 
   // ---- Auto režimas ----
@@ -285,12 +299,16 @@
   // Keičiama pamažu (RAMP_STEP kas 100 ms), kad vaizdas nešokinėtų. Taikoma „🎤 − korekcija“;
   // korekciją išmoksta, kai pataisai ranka.
   var AUTO_KEY = 'xf_auto' + SFX, OFF_KEY = 'xf_mic_offset_ms' + SFX;
-  var NO_PERM = 'nėra mikrofono leidimo', NO_APP = 'veikia tik programoje';
+  var NO_PERM = 'no microphone permission', NO_APP = 'works only in the app';
   var AUTO_START_MS = 20000, AUTO_STALL_MS = 8000, AUTO_EVERY_MS = 60000, AUTO_AFTER_CHANGE_MS = 30000;
+  var AUTO_STABLE_MS = 180000, STABLE_N = 3;   // po STABLE_N „ok“ iš eilės matuojama rečiau
+  var CAND_TTL_MS = 120000;                    // tiek galioja didelio pokyčio kandidatas
   var AUTO_CONFIRM_MS = 3000, AUTO_RETRY_MS = 30000, LEARN_MS = 10 * 60000;
   var FINE_MS = 12, BIG_MS = 60, AGREE_MS = 40, RAMP_STEP = 20, RECENT_N = 5, MIN_FOR_FINE = 3;
   var BIG_CONF = 0.35, BIG_RATIO = 1.5;
   var recent = [];       // paskutiniai patikimi 🎤 matavimai {ms, at} (žali, be korekcijos)
+  var stableN = 0;       // kiek kartų iš eilės matavimas sutapo su nustatyta delsa
+  var vidGen = 0;        // didėja keičiantis video: seno video matavimo rezultatas atmetamas
 
   function median(a) {
     var s = a.slice().sort(function (x, y) { return x - y; }), n = s.length;
@@ -329,7 +347,7 @@
   function setOffset(v) {
     micOffset = Math.max(-500, Math.min(500, Math.round(v)));
     localStorage.setItem(OFF_KEY, String(micOffset));
-    logAuto('korekcija ' + micOffset);
+    logAuto('offset ' + micOffset);
   }
 
   function stopRamp() { clearInterval(rampTimer); rampTimer = 0; }
@@ -356,27 +374,30 @@
   }
 
   function autoResult(res, err) {
-    if (err === NO_PERM || err === NO_APP) { autoBlocked = true; logAuto('sustabdyta: ' + err); updateLabel(); return; }
+    if (!autoOn) return;   // išjungta, kol vyko matavimas
+    if (err === NO_PERM || err === NO_APP) { autoBlocked = true; logAuto('stopped: ' + err); updateLabel(); return; }
     if (!res || !res.ok) {
-      logAuto('nepatikima: ' + (err || (res && res.ms + ' ms ' + res.conf)));
+      logAuto('unreliable: ' + (err || (res && res.ms + ' ms ' + res.conf)));
       autoSchedule(AUTO_RETRY_MS);
       return;
     }
     var clamp = function (v) { return Math.max(0, Math.min(3000, Math.round(v))); };
     var target = clamp(res.ms - micOffset);
-    var tag = '🎤 ' + res.ms + ' (' + res.conf + (res.ts === false ? ', be ts' : '') + ')';
+    var tag = '🎤 ' + res.ms + ' (' + res.conf + (res.ts === false ? ', no ts' : '') + ')';
 
     // Didelis pokytis: ar ne vienkartinė klaida? Reikia dviejų sutampančių ir aiškių (BIG_CONF, BIG_RATIO)
     // matavimų iš eilės: ritmiškoje muzikoje koreliacija gali pagauti ne tą smailę.
     if (Math.abs(target - delayMs) > BIG_MS) {
+      stableN = 0;
       if (res.conf < BIG_CONF || res.ratio < BIG_RATIO) {
-        logAuto(tag + ' → per neaiškus dideliam pokyčiui (' + res.ratio + ')');
+        logAuto(tag + ' → too unclear for a big change (' + res.ratio + ')');
         autoSchedule(AUTO_CONFIRM_MS);
         return;
       }
-      if (autoCand != null && Math.abs(autoCand.target - target) <= AGREE_MS) {
+      if (autoCand != null && Date.now() - autoCand.meas.at <= CAND_TTL_MS &&
+          Math.abs(autoCand.target - target) <= AGREE_MS) {
         var t = clamp((autoCand.target + target) / 2);
-        logAuto(tag + ' → keičiu ' + delayMs + '→' + t);
+        logAuto(tag + ' → change ' + delayMs + '→' + t);
         showMeas('🎤 auto: ' + delayMs + ' → ' + t + ' ms', true);
         recent = [autoCand.meas, { ms: res.ms, at: Date.now() }];   // seni matavimai nebetinka
         autoCand = null;
@@ -384,7 +405,7 @@
         autoSchedule(AUTO_CONFIRM_MS);
         return;
       }
-      logAuto(tag + ' → kandidatas ' + target + ', tikrinu dar kartą');
+      logAuto(tag + ' → candidate ' + target + ', checking again');
       autoCand = { target: target, meas: { ms: res.ms, at: Date.now() } };
       autoSchedule(AUTO_CONFIRM_MS);
       return;
@@ -395,20 +416,22 @@
     recent.push({ ms: res.ms, at: Date.now() });
     if (recent.length > RECENT_N) recent.shift();
     if (recent.length < MIN_FOR_FINE) {
-      logAuto(tag + ' → renku (' + recent.length + '/' + MIN_FOR_FINE + ')');
+      logAuto(tag + ' → collecting (' + recent.length + '/' + MIN_FOR_FINE + ')');
       autoSchedule(AUTO_CONFIRM_MS);
       updateDiag();
       return;
     }
     var med = clamp(recentMedian() - micOffset);
     if (Math.abs(med - delayMs) > FINE_MS) {
-      logAuto(tag + ' → tikslinu ' + delayMs + '→' + med + ' (mediana)');
+      logAuto(tag + ' → adjust ' + delayMs + '→' + med + ' (median)');
       showMeas('🎤 auto: ' + delayMs + ' → ' + med + ' ms', true);
+      stableN = 0;
       rampTo(med);
       autoSchedule(AUTO_AFTER_CHANGE_MS);
     } else {
-      logAuto(tag + ' → gerai (' + delayMs + ', mediana ' + med + ')');
-      autoSchedule(AUTO_EVERY_MS);
+      stableN++;
+      logAuto(tag + ' → ok (' + delayMs + ', median ' + med + ')');
+      autoSchedule(stableN >= STABLE_N ? AUTO_STABLE_MS : AUTO_EVERY_MS);
     }
     updateDiag();
   }
@@ -416,10 +439,10 @@
   function setAuto(on) {
     autoOn = !!on;
     localStorage.setItem(AUTO_KEY, autoOn ? '1' : '0');
-    autoBlocked = false; autoCand = null;
-    logAuto(autoOn ? 'auto įjungtas' : 'auto išjungtas');
+    autoBlocked = false; autoCand = null; stableN = 0;
+    logAuto(autoOn ? 'auto on' : 'auto off');
     updateLabel();
-    if (autoOn) autoSchedule(video && !video.paused ? 1000 : AUTO_START_MS); else { clearTimeout(autoTimer); autoTimer = 0; }
+    if (autoOn) autoSchedule(video && !video.paused ? 1000 : AUTO_START_MS); else { clearTimeout(autoTimer); autoTimer = 0; stopRamp(); }
   }
 
   function onWaiting() { stalled = true; }
@@ -427,7 +450,8 @@
     var wasStalled = stalled;
     stalled = false;
     autoCand = null;
-    if (wasStalled) logAuto('po užstrigimo');
+    if (wasStalled) stableN = 0;
+    if (wasStalled) logAuto('after stall');
     autoSchedule(wasStalled ? AUTO_STALL_MS : AUTO_START_MS);
   }
 
@@ -438,7 +462,11 @@
     ui.appendChild(btn('−10', -10));
     label = document.createElement('span');
     label.className = 'xf-label';
-    label.addEventListener('click', function (e) { e.stopPropagation(); e.preventDefault(); openUi(); }, true);
+    // Bakstelėjus ⏱: atidaro, dar kartą – uždaro.
+    label.addEventListener('click', function (e) {
+      e.stopPropagation(); e.preventDefault();
+      if (isOpen()) closeUi(); else openUi();
+    }, true);
     ui.appendChild(label);
     ui.appendChild(btn('+10', 10));
     ui.appendChild(btn('+100', 100));
@@ -490,7 +518,7 @@
     var fmt = audioFmt();
     diag.textContent = (delayMs > 0
       ? stats.capFps + '/' + stats.drawFps + ' fps · ' + stats.bmpMs + ' ms' + (stats.skip ? ' · −' + stats.skip : '')
-      : '') + (fmt ? (delayMs > 0 ? ' · ' : '') + fmt : '') + (micOffset ? ' · kor. ' + micOffset : '') +
+      : '') + (fmt ? (delayMs > 0 ? ' · ' : '') + fmt : '') + (micOffset ? ' · offs. ' + micOffset : '') +
       (CONN ? ' · ' + CONN : '') +
       // Paskutiniai 🎤 matavimai (žali ms): matosi, kiek jie šokinėja.
       (recent.length ? ' · 🎤 ' + recent.map(function (r) { return r.ms; }).join('/') : '');
@@ -647,10 +675,19 @@
 
   function onSeek() { flush(); }
 
+  // Naujas video: seni 🎤 matavimai nebetinka (delsa tarp video skiriasi), renkam iš naujo.
+  // Nustatyta delsa lieka, kol nauji matavimai parodys ką kita.
+  function newVideo() {
+    if (recent.length) logAuto('new video');
+    recent = []; autoCand = null; stableN = 0; lastOkMeas = null; vidGen++;
+    updateDiag();
+  }
+
   // Naujas video tame pačiame elemente: išmetam ir paskutinį rodytą kadrą.
   function onEmptied() {
     flush();
     if (shown) { shown.bmp.close(); shown = null; }
+    newVideo();
   }
 
   var api = {
@@ -703,10 +740,13 @@
         video.addEventListener('waiting', onWaiting);
         video.addEventListener('playing', onPlaying);
         stalled = false;
+        newVideo();
         if (!video.paused) autoSchedule(AUTO_START_MS);
       }
       ensureStyle();
       placeElements();
+      // Programos nustatymas „Show sync badge“: išjungus ženkliukas nerodomas, vėlinimas ir auto veikia toliau.
+      if (ui) ui.classList.toggle('xf-off', window.__xfBadge === false);
       if (delayMs > 0) start();
     }
   };

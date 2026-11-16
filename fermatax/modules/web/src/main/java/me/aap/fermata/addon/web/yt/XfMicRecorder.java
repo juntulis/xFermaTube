@@ -13,6 +13,7 @@ import androidx.core.content.ContextCompat;
 
 import java.util.Locale;
 
+import me.aap.fermata.ui.activity.MainActivityDelegate;
 import me.aap.utils.log.Log;
 
 /**
@@ -31,9 +32,20 @@ final class XfMicRecorder {
 	private XfMicRecorder() {
 	}
 
-	/** Paleidžia įrašą fone; rezultatas perduodamas į window.__xfDelay._mic(json). */
-	static void record(YoutubeWebView web, String secondsArg) {
+	/**
+	 * Paleidžia įrašą fone; rezultatas perduodamas į window.__xfDelay._mic(json).
+	 *
+	 * @param arg sekundės, pasirinktinai su „;ask“ (ranka paleistas matavimas: telefone be leidimo
+	 *            parodoma leidimo užklausa; šis matavimas vis tiek grąžina klaidą, kitas jau veiks).
+	 */
+	static void record(YoutubeWebView web, String arg) {
 		if (busy) return;
+		String secondsArg = (arg == null) ? "" : arg;
+		int sep = secondsArg.indexOf(';');
+		if (sep >= 0) {
+			if (secondsArg.substring(sep + 1).equals("ask")) askPermission(web);
+			secondsArg = secondsArg.substring(0, sep);
+		}
 		double sec;
 		try {
 			sec = Double.parseDouble(secondsArg);
@@ -60,9 +72,24 @@ final class XfMicRecorder {
 		t.start();
 	}
 
+	/** Leidimo užklausa tik telefone: automobilio ekrane Android Auto jos parodyti negali. */
+	private static void askPermission(YoutubeWebView web) {
+		try {
+			Context ctx = web.getContext();
+			if (ContextCompat.checkSelfPermission(ctx, Manifest.permission.RECORD_AUDIO) ==
+					PackageManager.PERMISSION_GRANTED) return;
+			MainActivityDelegate a = MainActivityDelegate.get(ctx);
+			if ((a == null) || a.isCarActivity()) return;
+			a.getAppActivity().checkPermissions(Manifest.permission.RECORD_AUDIO).onFailure(err ->
+					Log.e(err, "Failed to request RECORD_AUDIO permission"));
+		} catch (RuntimeException ex) {
+			Log.e(ex, "xF mic permission request failed");
+		}
+	}
+
 	private static String run(Context ctx, double seconds) {
 		if (ContextCompat.checkSelfPermission(ctx, Manifest.permission.RECORD_AUDIO) !=
-				PackageManager.PERMISSION_GRANTED) return err("nėra mikrofono leidimo");
+				PackageManager.PERMISSION_GRANTED) return err("no microphone permission");
 
 		AudioRecord rec = null;
 		int sr = 0;
@@ -82,7 +109,7 @@ final class XfMicRecorder {
 			} catch (Exception ignored) {
 			}
 		}
-		if (rec == null) return err("mikrofonas nepasiekiamas");
+		if (rec == null) return err("microphone unavailable");
 
 		try {
 			int bin = sr * BIN_MS / 1000;
@@ -94,13 +121,13 @@ final class XfMicRecorder {
 
 			rec.startRecording();
 			if (rec.getRecordingState() != AudioRecord.RECORDSTATE_RECORDING)
-				return err("mikrofonas užimtas");
+				return err("microphone busy");
 
 			for (int i = 0; i < bins; i++) {
 				int got = 0;
 				while (got < bin) {
 					int n = rec.read(buf, got, bin - got);
-					if (n <= 0) return err("skaitymo klaida " + n);
+					if (n <= 0) return err("read error " + n);
 					got += n;
 				}
 				if (i == 0) firstReadNano = System.nanoTime();

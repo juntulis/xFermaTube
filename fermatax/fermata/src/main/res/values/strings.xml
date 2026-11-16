@@ -11,6 +11,12 @@
     <string name="media_service_name_mobile_debug" translatable="false">@string/app_name_mobile_debug</string>
     <string name="media_service_name_auto_debug" translatable="false">xF Audio</string>
     <string name="xf_back" translatable="false">Back</string>
+    <string name="xf_mic_title" translatable="false">Microphone for auto sync</string>
+    <string name="xf_mic_message" translatable="false">xFermaTube can measure how late the car plays the sound and keep the picture in sync by itself. For that it listens with the phone microphone for a few seconds while a video plays. Only loudness levels are compared on the phone: no audio is saved or sent anywhere.
+
+Android Auto cannot show this request on the car screen, so it is asked here.</string>
+    <string name="xf_mic_allow" translatable="false">Allow</string>
+    <string name="xf_mic_later" translatable="false">Not now</string>
     <string name="xf_history" translatable="false">History</string>
     <string name="engine_mp_name" translatable="false">MediaPlayer</string>
     <string name="engine_exo_name" translatable="false">ExoPlayer</string>

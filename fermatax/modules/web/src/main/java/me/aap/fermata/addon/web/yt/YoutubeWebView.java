@@ -160,6 +160,12 @@ public class YoutubeWebView extends FermataWebView {
 		if (getAddon().autoHighestQualityChanged(prefs)) {
 			if (getAddon().autoHighestQuality()) setHighestVideoQuality();
 			else clearHighestVideoQuality();
+		} else if (getAddon().xfMaxQualityChanged(prefs) && getAddon().autoHighestQuality()) {
+			setHighestVideoQuality();
+		}
+		if (getAddon().xfSyncBadgeChanged(prefs)) {
+			evaluateJavascript("window.__xfBadge=" + getAddon().xfSyncBadge() +
+					";window.__xfDelay&&window.__xfDelay.attach();", null);
 		}
 		if (getAddon().autoFullscreenChanged(prefs) && (mediaEngine != null))
 			mediaEngine.onAutomaticEntryPreferenceChanged();
@@ -1000,7 +1006,8 @@ public class YoutubeWebView extends FermataWebView {
 			}
 		}
 		// Ryšio tipas: delsa ir korekcija saugomos atskirai USB / belaidžiam AA / telefonui.
-		evaluateJavascript("window.__xfConn='" + xfConnection() + "';" + videoDelayJs, null);
+		evaluateJavascript("window.__xfConn='" + xfConnection() + "';window.__xfBadge=" +
+				getAddon().xfSyncBadge() + ";" + videoDelayJs, null);
 	}
 
 	/** „phone“ – ne automobilyje; „usb“ – AA per laidą; „wifi“ – belaidis AA. */
@@ -1187,7 +1194,8 @@ public class YoutubeWebView extends FermataWebView {
 	}
 
 	void setHighestVideoQuality() {
-		evaluateJavascript(YoutubeScripts.SET_HIGHEST_VIDEO_QUALITY, null);
+		evaluateJavascript("window.__xfMaxQ='" + getAddon().xfMaxQuality() + "';" +
+				YoutubeScripts.SET_HIGHEST_VIDEO_QUALITY, null);
 	}
 
 	void clearHighestVideoQuality() {

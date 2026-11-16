@@ -35,9 +35,13 @@ final class InterfacePrefsBuilder {
 
 	static void add(MainActivityDelegate activity, PreferenceSet set) {
 		PreferenceStore store = activity.getPrefs();
+		// xFermata: YouTube-only versijoje lieka tik diena/naktis, juostos pusė ir kalba. Tema fiksuota
+		// (Glass: tik joje yra šoninė juosta), o vienetai, kelio duomenys ir greitoji juosta skirti
+		// ekranams, kurių čia nebėra.
+		boolean xf = me.aap.fermata.xf.XfConfig.YOUTUBE_ONLY;
 
 		normalizeTheme(store);
-		set.addListPref(o -> {
+		if (!xf) set.addListPref(o -> {
 			o.store = store;
 			o.pref = MainActivityPrefs.THEME_MAIN;
 			o.title = R.string.theme;
@@ -47,7 +51,7 @@ final class InterfacePrefsBuilder {
 			o.valuesMap = new int[]{MainActivityPrefs.THEME_CLASSIC, MainActivityPrefs.THEME_MATERIAL_YOU, MainActivityPrefs.THEME_GLASS};
 		});
 		normalizeGlassAppearance(store);
-		if (showsGlassOptions(store)) {
+		if (xf || showsGlassOptions(store)) {
 			set.addListPref(o -> {
 				o.store = store;
 				o.pref = MainActivityPrefs.GLASS_APPEARANCE;
@@ -58,7 +62,7 @@ final class InterfacePrefsBuilder {
 				o.valuesMap = new int[]{MainActivityPrefs.GLASS_APPEARANCE_DAY, MainActivityPrefs.GLASS_APPEARANCE_NIGHT};
 			});
 			// One unit system for the glass speedometer, trip distance, temperature and wind.
-			set.addListPref(o -> {
+			if (!xf) set.addListPref(o -> {
 				o.store = store;
 				o.pref = MainActivityPrefs.GLASS_SPEED_UNIT;
 				o.title = R.string.glass_units;
@@ -66,7 +70,7 @@ final class InterfacePrefsBuilder {
 				o.formatSubtitle = true;
 				o.values = new int[]{R.string.glass_units_metric, R.string.glass_units_imperial};
 			});
-			set.addBooleanPref(o -> {
+			if (!xf) set.addBooleanPref(o -> {
 				o.store = store;
 				o.pref = MainActivityPrefs.GLASS_ROAD_DATA;
 				o.title = R.string.glass_road_data;
@@ -102,7 +106,7 @@ final class InterfacePrefsBuilder {
 			o.valuesMap = langs.stream().mapToInt(Enum::ordinal).toArray();
 		});
 
-		if (!activity.isCarActivityNotMirror()) {
+		if (!xf && !activity.isCarActivityNotMirror()) {
 			set.addButton(o -> {
 				o.title = R.string.initial_setup_reopen;
 				o.subtitle = R.string.initial_setup_reopen_sub;
@@ -110,7 +114,7 @@ final class InterfacePrefsBuilder {
 			});
 		}
 
-		if (activity.isGlassTheme()) {
+		if (!xf && activity.isGlassTheme()) {
 			set.addButton(o -> {
 				o.title = R.string.glass_quick_manage_title;
 				o.subtitle = R.string.glass_quick_manage_sub;

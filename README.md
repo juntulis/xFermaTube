@@ -24,10 +24,10 @@ Some apps had an "audio delay" setting, but it either did nothing for Android Au
 xFermaTube is a stripped-down fork of [FermataX](https://github.com/chuoinho/fermataX) (itself a fork of [Fermata](https://github.com/AndreyPavlenko/Fermata)). It keeps only YouTube and adds A/V sync that tunes itself.
 
 - **Delayed video instead of earlier audio.** Audio that is already in the car's buffer can't be sped up, so the app holds the picture back. YouTube keeps playing normally. The frames are copied to a canvas and shown X ms later, so they line up with what you hear from the car's speakers.
-- **Automatic delay measurement with the phone's microphone.** The app records about 10 seconds of what the car's speakers actually play. It compares that with the video's own soundtrack and finds the lag by cross-correlation. In auto mode this repeats on its own: shortly after playback starts, after a buffering stall, and every 60 seconds. A single measurement is noisy (±20–30 ms), so fine-tuning uses the median of the last five measurements. A big jump, for example after a stall, needs two clear measurements in a row that agree. Changes are applied gradually so the picture doesn't jump.
+- **Automatic delay measurement with the phone's microphone.** The app records about 10 seconds of what the car's speakers actually play. It compares that with the video's own soundtrack and finds the lag by cross-correlation. In auto mode this repeats on its own: shortly after playback starts, after a buffering stall, and every 60 seconds (every 3 minutes once the delay has settled). Each new video starts with fresh measurements, because the lag differs from video to video. A single measurement is noisy (±20–30 ms), so fine-tuning uses the median of the last five measurements. A big jump, for example after a stall, needs two clear measurements in a row that agree. Changes are applied gradually so the picture doesn't jump.
 - **Learns your correction.** If you nudge the delay by hand right after a measurement, it remembers the difference and applies it from then on.
 - **Separate settings for USB and wireless Android Auto.** These connections have different latency, so each keeps its own delay. On the phone screen the delay is 0.
-- **YouTube only.** The app opens straight into YouTube. The car's side rail has just **Home, History, Back, Refresh, Settings**, and Settings is trimmed to what matters. You can sign in to YouTube on the phone once, and the car uses the same session.
+- **YouTube only.** The app opens straight into YouTube. The car's side rail has just **Home, History, Back, Refresh, Settings**, and Settings is one short page: appearance, language, YouTube options (quality limit, ad skipping, SponsorBlock, auto fullscreen) and the sync badge. You can sign in to YouTube on the phone once, and the car uses the same session.
 - **Much smaller.** The APK went from 185 MB to about 19 MB once the unused add-ons were removed (VLC, ExoPlayer, TV, radio, podcasts, audiobooks, SMB, SFTP).
 
 ## What it achieves
@@ -41,13 +41,14 @@ I built this to fix one annoying problem for myself, not to make money or collec
 - **Fully open source (GPL-3.0).** All the code is in this repo. You can read it and build the APK yourself.
 - **No ads, analytics or tracking added.** There are no analytics or crash-reporting SDKs, no accounts and no xFermata server. Nothing is sent to me.
 - **The microphone stays on the phone.** It is used only for the sync measurement and only while a video is playing. The recording is turned into a loudness curve in memory to find the delay, and the audio is never saved or uploaded. See [`XfMicRecorder.java`](fermatax/modules/web/src/main/java/me/aap/fermata/addon/web/yt/XfMicRecorder.java).
+- **Few permissions.** The APK declares internet, microphone, notifications and media playback, plus a few routine ones (network and Wi-Fi state, wake lock, audio settings). The location, camera, storage, screen overlay, install-packages, boot and system-settings permissions that FermataX declares are removed.
 - **YouTube is the normal mobile YouTube site.** Google's own privacy policy applies, the same as in any browser.
 
 ## Install
 
 1. Download the APK from [Releases](../../releases).
 2. Sideload it so that Android Auto accepts it, for example with **AAenabler** or **KingInstaller**. Then turn on *Unknown sources* in Android Auto developer settings.
-3. On the phone, grant the **microphone** permission: Settings → Apps → xFermaTube → Permissions → Microphone. The app can't ask for it while it runs on the car screen.
+3. Open xFermaTube on the phone once and allow the **microphone** when it asks. The car screen can't show this request. You can also grant it later: Settings → Apps → xFermaTube → Permissions → Microphone.
 4. Optional: open xFermaTube on the phone and sign in to YouTube (avatar → Sign in).
 
 In the car, tap the faint **⏱ X ms** label at the top left of the video to see the controls:
@@ -55,6 +56,12 @@ In the car, tap the faint **⏱ X ms** label at the top left of the video to see
 - **−100 / −10 / +10 / +100** adjust the delay by hand.
 - **🎤** measures the delay once.
 - **Auto** turns automatic measurement on or off (green = on).
+
+Tap the label again to close it. If you don't need it, hide it in Settings → *Show A/V sync badge*: the delay and auto sync keep working.
+
+In fullscreen, a tap shows or hides the control panel. Play/pause, seek and the **⋮** menu (quality, scaling, speed) are buttons on that panel. Swipe gestures on the video are turned off, so a stray touch doesn't pause, seek or skip.
+
+Auto quality picks the best available resolution up to **1080p** by default (Settings → *Highest quality limit*: 720p, 1080p or no limit). Higher resolutions cost battery and data without a visible gain on a car screen.
 
 > The release APK is debug-signed and built for arm64 phones only.
 

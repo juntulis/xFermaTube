@@ -252,7 +252,8 @@ public class MainActivityDelegate extends ActivityDelegate
 		getPrefs().addBroadcastListener(this);
 		int navId;
 		int fragmentId;
-		boolean initialSetup = !isCarActivityNotMirror() &&
+		// xFermaTube: the FermataX first-run page (storage, location, voice control) does not apply.
+		boolean initialSetup = !me.aap.fermata.xf.XfConfig.YOUTUBE_ONLY && !isCarActivityNotMirror() &&
 				getPrefs().shouldShowInitialSetup(this);
 
 		if ((state != null) && state.getBoolean("restoreFragment", false)) {
@@ -285,6 +286,7 @@ public class MainActivityDelegate extends ActivityDelegate
 		init();
 
 		AddonManager.get().onActivityCreate(this);
+		xfAskMicrophoneOnPhone();
 
 		// Permissions are requested by the feature that needs them. In particular, an Android
 		// Auto activity must never try to launch a phone runtime-permission dialog at startup.
@@ -393,6 +395,34 @@ public class MainActivityDelegate extends ActivityDelegate
 		} else {
 			showPrimaryRoot();
 		}
+	}
+
+	/**
+	 * xFermaTube: auto sync measures the audio delay with the phone microphone. Android Auto cannot
+	 * show a runtime-permission dialog, so the permission is explained and requested once when the
+	 * app is opened on the phone. Never runs on the car screen.
+	 */
+	private void xfAskMicrophoneOnPhone() {
+		if (!me.aap.fermata.xf.XfConfig.YOUTUBE_ONLY || isCarActivity()) return;
+		if (getPrefs().getBooleanPref(MainActivityPrefs.XF_MIC_ASKED)) return;
+		if (androidx.core.content.ContextCompat.checkSelfPermission(getContext(), permission.RECORD_AUDIO) ==
+				PERMISSION_GRANTED) return;
+		getHandler().post(() -> {
+			try {
+				createDialogBuilder()
+						.setTitle(R.string.xf_mic_title)
+						.setMessage(R.string.xf_mic_message)
+						.setNegativeButton(R.string.xf_mic_later, (d, w) ->
+								getPrefs().applyBooleanPref(MainActivityPrefs.XF_MIC_ASKED, true))
+						.setPositiveButton(R.string.xf_mic_allow, (d, w) -> {
+							getPrefs().applyBooleanPref(MainActivityPrefs.XF_MIC_ASKED, true);
+							getAppActivity().checkPermissions(permission.RECORD_AUDIO).onFailure(err ->
+									Log.e(err, "Failed to request RECORD_AUDIO permission"));
+						}).show();
+			} catch (RuntimeException ex) {
+				Log.e(ex, "Failed to show the microphone dialog");
+			}
+		});
 	}
 
 	public void showPrimaryRoot() {

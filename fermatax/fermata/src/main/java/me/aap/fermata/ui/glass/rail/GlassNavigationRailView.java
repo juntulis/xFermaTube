@@ -505,6 +505,12 @@ public class GlassNavigationRailView extends FrameLayout {
         actionButtons[2].setSelected(activeId == R.id.glass_addons_catalog_fragment);
         actionButtons[3].setSelected(activeId == R.id.settings_fragment);
         actionButtons[4].setSelected(false);
+        // xFermata: „Refresh“ veikia tik YouTube puslapyje; nustatymuose jis pritemdytas ir nespaudžiamas.
+        if ((actionButtons.length > 6) && (actionButtons[6] != null)) {
+            boolean web = frag instanceof me.aap.fermata.xf.XfNavigable;
+            actionButtons[6].setEnabled(web);
+            actionButtons[6].setAlpha(web ? 1f : 0.35f);
+        }
     }
 
     @Override
@@ -886,9 +892,18 @@ public class GlassNavigationRailView extends FrameLayout {
         }
     }
 
+    /**
+     * xFermata: kraštinis gestas „brauk nuo krašto = Atgal“ YouTube-only versijoje išjungtas.
+     * Jis pasiimdavo visus lietimus per 36 dp nuo krašto (puslapio ir ⏱ valdiklio mygtukai ten
+     * nesispaudė), o braukimas uždarydavo video ar pačią programą. „Atgal“ yra šoninėje juostoje.
+     */
+    private static boolean edgeBackEnabled() {
+        return !me.aap.fermata.xf.XfConfig.YOUTUBE_ONLY;
+    }
+
     @Override
     public boolean onInterceptTouchEvent(MotionEvent ev) {
-        if (isOpen || !isCar()) {
+        if (isOpen || !isCar() || !edgeBackEnabled()) {
             return super.onInterceptTouchEvent(ev);
         }
 
@@ -945,7 +960,7 @@ public class GlassNavigationRailView extends FrameLayout {
             }
             return true;
         }
-        if (!isOpen && isCar()) {
+        if (!isOpen && isCar() && edgeBackEnabled()) {
             switch (ev.getActionMasked()) {
                 case MotionEvent.ACTION_DOWN:
                     // Leave taps and horizontal scrolls near the edge to the content under the rail overlay.

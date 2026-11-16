@@ -18,6 +18,13 @@
     <string name="video_quality">Video quality</string>
     <string name="open_on_start">Open on start</string>
     <string name="auto_highest_video_quality">Auto-select highest video quality</string>
+    <string name="xf_max_quality" translatable="false">Highest quality limit</string>
+    <string name="xf_max_quality_sub" translatable="false">%1$s. Higher resolutions only cost battery and data: the delayed picture is never drawn wider than 1280 px.</string>
+    <string name="xf_max_quality_720" translatable="false">720p</string>
+    <string name="xf_max_quality_1080" translatable="false">1080p</string>
+    <string name="xf_max_quality_none" translatable="false">No limit</string>
+    <string name="xf_sync_badge" translatable="false">Show A/V sync badge (⏱)</string>
+    <string name="xf_sync_badge_sub" translatable="false">The small ⏱ control in the video corner. Delay and auto sync keep working when it is hidden.</string>
     <string name="yt_auto_fullscreen">Automatic fullscreen</string>
     <string name="try_to_skip_ad">Try to skip advertising</string>
     <string name="sponsorblock" translatable="false">SponsorBlock</string>

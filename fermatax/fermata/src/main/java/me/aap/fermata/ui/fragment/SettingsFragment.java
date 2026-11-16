@@ -496,6 +496,14 @@ public class SettingsFragment extends MainActivityFragment
 			if (!addon.hasSettings || !me.aap.fermata.xf.XfConfig.YOUTUBE_ADDON_CLASS.equals(addon.className))
 				continue;
 			addSectionHeader(set, ctx, addon.addonName);
+			me.aap.fermata.addon.FermataAddon yt = amgr.getAddon(addon.className);
+			if (yt != null) {
+				// Tiesiai pagrindiniame puslapyje, be atskiro „YouTube“ puslapio: „Back“ iš nustatymų
+				// grįžta į YouTube vienu paspaudimu.
+				yt.contributeSettings(ctx, store, set, PrefCondition.create(store, addon.enabledPref));
+				continue;
+			}
+			// Priedas dar neužkrautas (neturėtų nutikti, YouTube atsidaro pirmas): senas atskiras puslapis.
 			AddonPrefsBuilder b = new AddonPrefsBuilder(amgr, addon, store, this::getContext);
 			addonPrefsBuilders.add(b);
 			PreferenceSet sub = set.subSet(b);

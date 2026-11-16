@@ -80,6 +80,12 @@ public class YoutubeAddon extends WebBrowserAddon
 			Pref.b("YT_AUTO_HIGHEST_QUALITY", false);
 	private static final Pref<BooleanSupplier> YT_AUTO_FULLSCREEN =
 			YoutubePlayerPreferences.AUTO_FULLSCREEN;
+	// xFermata: „aukščiausios kokybės“ riba. Vėlinimo kadrai ne platesni nei 1280 px, todėl 1440p / 4K
+	// tik eikvoja procesorių, bateriją ir duomenis. 0 = 720p, 1 = 1080p (numatyta), 2 = be ribos.
+	private static final Pref<IntSupplier> XF_MAX_QUALITY = Pref.i("XF_YT_MAX_QUALITY", 1);
+	private static final String[] XF_MAX_QUALITY_LEVELS = {"hd720", "hd1080", "highres"};
+	// xFermata: ar rodyti ⏱ ženkliuką video kampe (vėlinimas ir auto veikia ir jį paslėpus).
+	private static final Pref<BooleanSupplier> XF_SYNC_BADGE = Pref.b("XF_SYNC_BADGE", true);
 	private static final Pref<Supplier<String>> YT_ITEM_HISTORY = Pref.s("YT_ITEM_HISTORY", "");
 	private static final Pref<Supplier<String>> YT_PINNED_ITEMS = Pref.s("YT_PINNED_ITEMS", "");
 	private static final YoutubeRetentionPolicy ITEM_RETENTION =
@@ -197,6 +203,23 @@ public class YoutubeAddon extends WebBrowserAddon
 			o.store = getPreferenceStore();
 			o.pref = YT_AUTO_HIGHEST_QUALITY;
 			o.title = R.string.auto_highest_video_quality;
+			o.visibility = visibility;
+		});
+		set.addListPref(o -> {
+			o.store = getPreferenceStore();
+			o.pref = XF_MAX_QUALITY;
+			o.title = R.string.xf_max_quality;
+			o.subtitle = R.string.xf_max_quality_sub;
+			o.formatSubtitle = true;
+			o.values = new int[]{R.string.xf_max_quality_720, R.string.xf_max_quality_1080,
+					R.string.xf_max_quality_none};
+			o.visibility = visibility;
+		});
+		set.addBooleanPref(o -> {
+			o.store = getPreferenceStore();
+			o.pref = XF_SYNC_BADGE;
+			o.title = R.string.xf_sync_badge;
+			o.subtitle = R.string.xf_sync_badge_sub;
 			o.visibility = visibility;
 		});
 		YoutubePlayerPreferences.contributeAutoFullscreenSetting(getPreferenceStore(), set, visibility);
@@ -361,6 +384,24 @@ public class YoutubeAddon extends WebBrowserAddon
 
 	boolean autoHighestQuality() {
 		return getPreferenceStore().getBooleanPref(YT_AUTO_HIGHEST_QUALITY);
+	}
+
+	/** xFermata: YouTube kokybės lygis, virš kurio „aukščiausia kokybė“ nekyla (hd720 / hd1080 / highres). */
+	String xfMaxQuality() {
+		int i = getPreferenceStore().getIntPref(XF_MAX_QUALITY);
+		return XF_MAX_QUALITY_LEVELS[((i < 0) || (i >= XF_MAX_QUALITY_LEVELS.length)) ? 1 : i];
+	}
+
+	boolean xfMaxQualityChanged(List<Pref<?>> prefs) {
+		return prefs.contains(XF_MAX_QUALITY);
+	}
+
+	boolean xfSyncBadge() {
+		return getPreferenceStore().getBooleanPref(XF_SYNC_BADGE);
+	}
+
+	boolean xfSyncBadgeChanged(List<Pref<?>> prefs) {
+		return prefs.contains(XF_SYNC_BADGE);
 	}
 
 	boolean getAutoFullscreen() {

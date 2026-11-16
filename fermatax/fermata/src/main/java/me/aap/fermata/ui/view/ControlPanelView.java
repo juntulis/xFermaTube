@@ -325,32 +325,42 @@ public class ControlPanelView extends ConstraintLayout
 		return super.onTouchEvent(e);
 	}
 
+	// xFermata: YouTube-only versijoje viso ekrano video valdomas tik mygtukais. Bakstelėjimas rodo
+	// arba slepia valdiklį, o braukimai nieko nedaro: automobilyje netikslus prisilietimas anksčiau
+	// perjungdavo video, sukdavo laiką ar keisdavo garsą.
+	private static final boolean XF_SIMPLE_TOUCH = me.aap.fermata.xf.XfConfig.YOUTUBE_ONLY;
+
 	@Override
 	public boolean onSwipeLeft(MotionEvent e1, MotionEvent e2) {
+		if (XF_SIMPLE_TOUCH) return true;
 		getActivity().getMediaServiceBinder().onPrevNextButtonClick(true);
 		return true;
 	}
 
 	@Override
 	public boolean onSwipeRight(MotionEvent e1, MotionEvent e2) {
+		if (XF_SIMPLE_TOUCH) return true;
 		getActivity().getMediaServiceBinder().onPrevNextButtonClick(false);
 		return true;
 	}
 
 	@Override
 	public boolean onSwipeUp(MotionEvent e1, MotionEvent e2) {
+		if (XF_SIMPLE_TOUCH) return true;
 		getActivity().getMediaServiceBinder().onPrevNextFolderClick(false);
 		return true;
 	}
 
 	@Override
 	public boolean onSwipeDown(MotionEvent e1, MotionEvent e2) {
+		if (XF_SIMPLE_TOUCH) return true;
 		getActivity().getMediaServiceBinder().onPrevNextFolderClick(true);
 		return true;
 	}
 
 	@Override
 	public boolean onScroll(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY) {
+		if (XF_SIMPLE_TOUCH) return true;
 		boolean horizontal = Math.abs(distanceX) >= Math.abs(distanceY);
 		long time = System.currentTimeMillis();
 		long diff;
@@ -405,6 +415,8 @@ public class ControlPanelView extends ConstraintLayout
 		if (System.currentTimeMillis() - lastControlsShowTimestamp < 400) {
 			return true;
 		}
+		// xFermata: dvigubas bakstelėjimas irgi nestabdo video (pauzė – tik mygtuku).
+		if (XF_SIMPLE_TOUCH) return true;
 		a.getMediaServiceBinder().onPlayPauseButtonClick();
 		return true;
 	}
@@ -433,6 +445,8 @@ public class ControlPanelView extends ConstraintLayout
 			return true;
 		}
 		if (isVideoControlsVisible()) {
+			// xFermata: bakstelėjimas, kai valdiklis matomas, jį paslepia (pauzė – tik mygtuku).
+			if (XF_SIMPLE_TOUCH) return onTouch((VideoView) gestureSource);
 			a.getMediaServiceBinder().onPlayPauseButtonClick();
 			return true;
 		}
