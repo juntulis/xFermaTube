@@ -18,7 +18,7 @@
 > 2. On the phone: Android Auto settings → tap **Version** 10 times → ⋮ → **Developer settings** → tick **Unknown sources**.
 > 3. Open xFermaTube on the phone once and allow the **microphone**.
 > 4. In the car, open **xFermaTube** (play icon), not *xF Audio* (speaker icon).
-> 5. **Sync is not instant.** The app has to listen first: give each new video about 10–20 seconds before sound and picture line up.
+> 5. **Sync is not instant.** The app has to listen first: give each new video up to a minute before sound and picture line up.
 
 ---
 
@@ -36,7 +36,7 @@ Some apps had an "audio delay" setting, but it either did nothing for Android Au
 xFermaTube is a stripped-down fork of [FermataX](https://github.com/chuoinho/fermataX) (itself a fork of [Fermata](https://github.com/AndreyPavlenko/Fermata)). It keeps only YouTube and adds A/V sync that tunes itself.
 
 - **Delayed video instead of earlier audio.** Audio that is already in the car's buffer can't be sped up, so the app holds the picture back. YouTube keeps playing normally. The frames are copied to a canvas and shown X ms later, so they line up with what you hear from the car's speakers.
-- **Automatic delay measurement with the phone's microphone.** The app records about 10 seconds of what the car's speakers actually play. It compares that with the video's own soundtrack and finds the lag by cross-correlation. In auto mode this repeats on its own: about 4 seconds after a new video starts (short 6-second measurements, the first clear one is applied right away, so the picture is usually in sync within 10–20 seconds), after a buffering stall, and every 20 seconds (every minute once the delay has settled). Each new video starts with fresh measurements, because the lag differs from video to video. A single measurement is noisy (±20–30 ms), so fine-tuning uses the median of the last five measurements. A big jump, for example after a stall, needs two measurements that agree (one of them clear), or three of any kind. Changes are applied gradually so the picture doesn't jump.
+- **Automatic delay measurement with the phone's microphone.** The app records about 10 seconds of what the car's speakers actually play. It compares that with the video's own soundtrack and finds the lag by cross-correlation. In auto mode this repeats on its own: about 4 seconds after a new video starts (short 6-second measurements, the first clear one is applied right away, so the picture is in sync within a minute, often sooner), after a buffering stall, and every 20 seconds (every minute once the delay has settled). Each new video starts with fresh measurements, because the lag differs from video to video. A single measurement is noisy (±20–30 ms), so fine-tuning uses the median of the last five measurements. A big jump, for example after a stall, needs two measurements that agree (one of them clear), or three of any kind. Changes are applied gradually so the picture doesn't jump.
 - **Learns your correction.** If you nudge the delay by hand right after a measurement, it remembers the difference and applies it from then on.
 - **Separate settings for USB and wireless Android Auto.** These connections have different latency, so each keeps its own delay. On the phone screen the delay is 0.
 - **YouTube only.** The app opens straight into YouTube. The car's side rail has just **Home, History, Back, Refresh, Settings**, and Settings is one short page: appearance, language, YouTube options (quality limit, ad skipping, SponsorBlock, auto fullscreen) and the sync badge. You can sign in to YouTube on the phone once, and the car uses the same session.
@@ -111,7 +111,7 @@ Xiaomi / HyperOS: if step 5 fails, turn on **Install via USB** in Developer opti
 
 ## Using it in the car
 
-**Sync is not instant.** The app can't know the delay in advance: it has to hear the car's speakers through the phone's microphone and compare that with the video's soundtrack. For each new video expect about 10–20 seconds before sound and picture line up. It can take longer when the audio is quiet, the car is noisy, or the music is very rhythmic. Until then the video uses the delay from the previous video. The sound must be audible in the cabin: with the volume at zero there is nothing to measure.
+**Sync is not instant.** The app can't know the delay in advance: it has to hear the car's speakers through the phone's microphone and compare that with the video's soundtrack. For each new video it can take up to a minute before sound and picture line up. It can take longer when the audio is quiet, the car is noisy, or the music is very rhythmic. Until then the video uses the delay from the previous video. The sound must be audible in the cabin: with the volume at zero there is nothing to measure.
 
 Tap the faint **⏱ X ms** label at the top left of the video to see the controls:
 
