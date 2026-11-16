@@ -495,7 +495,7 @@
   }
 
   // ---- Auto režimas ----
-  // 🎤 matuoja pats: naujam video po ~10 s (greitas startas), po pauzės ~20 s, po užstrigimo
+  // 🎤 matuoja pats: naujam video po ~4 s (greitas startas), po pauzės ~20 s, po užstrigimo
   // (waiting → playing) ir kas AUTO_EVERY_MS.
   // Vienas matavimas turi ±20–30 ms triukšmo, todėl:
   //  - didelis pokytis (> BIG_MS, pvz. po užstrigimo) taikomas, kai du matavimai iš eilės sutampa (±AGREE_MS);
@@ -505,20 +505,25 @@
   // korekciją išmoksta, kai pataisai ranka.
   var AUTO_KEY = 'xf_auto' + SFX, OFF_KEY = 'xf_mic_offset_ms' + SFX;
   var NO_PERM = 'no microphone permission', NO_APP = 'works only in the app';
-  var AUTO_START_MS = 20000, AUTO_STALL_MS = 8000, AUTO_EVERY_MS = 60000, AUTO_AFTER_CHANGE_MS = 30000;
-  var AUTO_STABLE_MS = 180000, STABLE_N = 3;   // po STABLE_N „ok“ iš eilės matuojama rečiau
+  var AUTO_START_MS = 10000, AUTO_STALL_MS = 5000, AUTO_EVERY_MS = 20000, AUTO_AFTER_CHANGE_MS = 10000;
+  var AUTO_STABLE_MS = 60000, STABLE_N = 3;   // po STABLE_N „ok“ iš eilės matuojama rečiau
   var CAND_TTL_MS = 120000;                    // tiek galioja didelio pokyčio kandidatas
   // Greitas startas: pirmas naujo video matavimas prasideda po AUTO_FAST_MS, trunka FAST_SEC, o aiškus
   // rezultatas (FAST_CONF, FAST_RATIO) taikomas iškart. Toliau įprasti matavimai jį patikslina mediana.
-  var AUTO_FAST_MS = 10000, FAST_SEC = 6, FAST_CONF = 0.45, FAST_RATIO = 1.8;
-  var AUTO_CONFIRM_MS = 3000, AUTO_RETRY_MS = 30000, LEARN_MS = 10 * 60000;
+  var AUTO_FAST_MS = 4000, FAST_SEC = 6, FAST_CONF = 0.45, FAST_RATIO = 1.8;
+  var AUTO_CONFIRM_MS = 1500, AUTO_RETRY_MS = 10000, LEARN_MS = 10 * 60000;
+  // „Gaudymas“: kol šiam video dar nėra MIN_FOR_FINE matavimų arba laukia didelio pokyčio kandidatas,
+  // matuojama trumpai (FAST_SEC) ir be pertraukų; nepavykęs matavimas kartojamas iškart (iki CATCH_MISS kartų).
+  var CATCH_MISS = 4;
   var FINE_MS = 12, BIG_MS = 60, AGREE_MS = 40, RAMP_STEP = 20, RECENT_N = 5, MIN_FOR_FINE = 3;
   var BIG_CONF = 0.35, BIG_RATIO = 1.5;
   var recent = [];       // paskutiniai patikimi 🎤 matavimai {ms, at} (žali, be korekcijos)
   var stableN = 0;       // kiek kartų iš eilės matavimas sutapo su nustatyta delsa
   var vidGen = 0;        // didėja keičiantis video: seno video matavimo rezultatas atmetamas
   var fastStart = true;  // kitas auto matavimas – greitas (naujo video pirmasis)
+  var missN = 0;         // kiek nepavykusių matavimų iš eilės gaudymo metu
   function startDelay() { return fastStart ? AUTO_FAST_MS : AUTO_START_MS; }
+  function catching() { return (autoCand != null && autoCand.length > 0) || recent.length < MIN_FOR_FINE; }
 
   function median(a) {
     var s = a.slice().sort(function (x, y) { return x - y; }), n = s.length;
@@ -564,10 +569,12 @@
 
   function rampTo(target) {
     stopRamp();
+    // Didelis pokytis pritaikomas ne ilgiau kaip per ~1 s (žingsnis didesnis), mažas – po RAMP_STEP.
+    var step = Math.max(RAMP_STEP, Math.ceil(Math.abs(target - delayMs) / 10));
     rampTimer = setInterval(function () {
       var d = target - delayMs;
-      if (Math.abs(d) <= RAMP_STEP) { stopRamp(); api.set(target); return; }
-      api.set(delayMs + (d > 0 ? RAMP_STEP : -RAMP_STEP));
+      if (Math.abs(d) <= step) { stopRamp(); api.set(target); return; }
+      api.set(delayMs + (d > 0 ? step : -step));
     }, 100);
   }
 
@@ -582,7 +589,7 @@
     if (!video || video.paused || stalled || measuring || document.hidden) { autoSchedule(5000); return; }
     var fast = fastStart;
     fastStart = false;
-    measure({ auto: true, sec: fast ? FAST_SEC : 0, fakeDelayMs: autoFake,
+    measure({ auto: true, sec: (fast || catching()) ? FAST_SEC : 0, fakeDelayMs: autoFake,
       onDone: function (res, err) { autoResult(res, err, fast); } });
   }
 
@@ -591,16 +598,19 @@
     if (err === NO_PERM || err === NO_APP) { autoBlocked = true; logAuto('stopped: ' + err); updateLabel(); return; }
     if (!res || !res.ok) {
       logAuto('unreliable: ' + (err || (res && res.ms + ' ms ' + res.conf)));
-      autoSchedule(fast ? AUTO_CONFIRM_MS : AUTO_RETRY_MS);   // po greito starto iškart įprastas matavimas
+      // Gaudymo metu kartojama iškart, bet ne be galo (tyla, nutildytas garsas): po CATCH_MISS – retai.
+      autoSchedule((fast || catching()) && ++missN <= CATCH_MISS ? AUTO_CONFIRM_MS : AUTO_RETRY_MS);
       return;
     }
+    missN = 0;
     var clamp = function (v) { return Math.max(0, Math.min(3000, Math.round(v))); };
     var target = clamp(res.ms - micOffset);
     var tag = '🎤 ' + res.ms + ' (' + res.conf + (res.ts === false ? ', no ts' : '') + ')';
 
-    // Greitas startas: aiškus pirmas matavimas taikomas iškart, nelaukiant antro ar trečio.
+    // Greitas startas: pirmas aiškus šio video matavimas taikomas iškart, nelaukiant antro ar trečio
+    // (ne tik pats pirmas bandymas: jei jis buvo neaiškus, tinka ir kitas aiškus).
     // Neaiškus keliauja įprastu keliu (kandidatas arba rinkimas medianai).
-    if (fast && res.conf >= FAST_CONF && res.ratio >= FAST_RATIO) {
+    if ((fast || !recent.length) && res.conf >= FAST_CONF && res.ratio >= FAST_RATIO) {
       autoCand = null; stableN = 0;
       recent.push({ ms: res.ms, at: Date.now() });
       if (recent.length > RECENT_N) recent.shift();
@@ -616,28 +626,33 @@
       return;
     }
 
-    // Didelis pokytis: ar ne vienkartinė klaida? Reikia dviejų sutampančių ir aiškių (BIG_CONF, BIG_RATIO)
-    // matavimų iš eilės: ritmiškoje muzikoje koreliacija gali pagauti ne tą smailę.
+    // Didelis pokytis: ar ne vienkartinė klaida? Ritmiškoje muzikoje koreliacija gali pagauti ne tą smailę,
+    // todėl vieno matavimo neužtenka. Taikoma, kai sutampa (±AGREE_MS) du matavimai, iš kurių bent vienas
+    // aiškus (BIG_CONF, BIG_RATIO), arba trys bet kokie. Kandidatai galioja CAND_TTL_MS ir neprivalo būti
+    // iš eilės: neaiškus matavimas kandidato nebeišmeta, o pats tampa kandidatu.
     if (Math.abs(target - delayMs) > BIG_MS) {
       stableN = 0;
-      if (res.conf < BIG_CONF || res.ratio < BIG_RATIO) {
-        logAuto(tag + ' → too unclear for a big change (' + res.ratio + ')');
-        autoSchedule(AUTO_CONFIRM_MS);
-        return;
-      }
-      if (autoCand != null && Date.now() - autoCand.meas.at <= CAND_TTL_MS &&
-          Math.abs(autoCand.target - target) <= AGREE_MS) {
-        var t = clamp((autoCand.target + target) / 2);
+      var now = Date.now(), clear = res.conf >= BIG_CONF && res.ratio >= BIG_RATIO;
+      var cands = (autoCand || []).filter(function (c) { return now - c.meas.at <= CAND_TTL_MS; });
+      var same = cands.filter(function (c) { return Math.abs(c.target - target) <= AGREE_MS; });
+      var anyClear = clear || same.some(function (c) { return c.clear; });
+      if (same.length >= 2 || (same.length === 1 && anyClear)) {
+        var sum = target;
+        same.forEach(function (c) { sum += c.target; });
+        var t = clamp(sum / (same.length + 1));
         logAuto(tag + ' → change ' + delayMs + '→' + t);
         showMeas('🎤 auto: ' + delayMs + ' → ' + t + ' ms', true);
-        recent = [autoCand.meas, { ms: res.ms, at: Date.now() }];   // seni matavimai nebetinka
+        // seni matavimai nebetinka
+        recent = same.map(function (c) { return c.meas; }).concat([{ ms: res.ms, at: now }]).slice(-RECENT_N);
         autoCand = null;
         rampTo(t);
         autoSchedule(AUTO_CONFIRM_MS);
+        updateDiag();
         return;
       }
-      logAuto(tag + ' → candidate ' + target + ', checking again');
-      autoCand = { target: target, meas: { ms: res.ms, at: Date.now() } };
+      logAuto(tag + ' → candidate ' + target + (clear ? '' : ' (unclear, ' + res.ratio + ')') + ', checking again');
+      cands.push({ target: target, clear: clear, meas: { ms: res.ms, at: now } });
+      autoCand = cands.slice(-4);
       autoSchedule(AUTO_CONFIRM_MS);
       return;
     }
@@ -911,7 +926,7 @@
   // Nustatyta delsa lieka, kol nauji matavimai parodys ką kita.
   function newVideo() {
     if (recent.length) logAuto('new video');
-    recent = []; autoCand = null; stableN = 0; lastOkMeas = null; vidGen++; fastStart = true;
+    recent = []; autoCand = null; stableN = 0; missN = 0; lastOkMeas = null; vidGen++; fastStart = true;
     updateDiag();
   }
 

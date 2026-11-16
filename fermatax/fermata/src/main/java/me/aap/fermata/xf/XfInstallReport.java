@@ -163,15 +163,16 @@ public final class XfInstallReport {
 			b.append("\nRESULT: the install source is Google Play Store, as on a phone where the " +
 					"video app shows up. Look for the video app on the car screen: the Customize " +
 					"launcher list on the phone may not show it while no car is connected. If the car " +
-					"screen still shows only the audio entry, the cause is somewhere else.\n");
+					"screen still shows only the audio entry and you used Fix now, uninstall and install " +
+					"through AAenabler: on some cars the fix is not enough.\n");
 		} else {
 			b.append("\nRESULT: the installer is not Google Play Store. On a phone where the video " +
 					"app shows up it is com.android.vending, so this is the most likely reason why " +
 					"Android Auto hides the video app.\n" +
 					(XfInstallFix.available(ctx) ?
-							"1. Tap Fix now: the app reinstalls itself with the right install source " +
+							"1. Tap Fix now (experimental, not enough on some cars): the app reinstalls itself " +
 									"through the phone's Wireless debugging.\n" +
-									"2. Or uninstall, then install through AAenabler: open AAenabler and pick " +
+									"2. Reliable way: uninstall, then install through AAenabler: open AAenabler and pick " +
 									"the APK from inside it. Run this check again.\n" :
 							"1. Uninstall, then install through AAenabler: open AAenabler and pick the APK " +
 									"from inside it. Run this check again.\n" +

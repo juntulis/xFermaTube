@@ -35,7 +35,7 @@ Some apps had an "audio delay" setting, but it either did nothing for Android Au
 xFermaTube is a stripped-down fork of [FermataX](https://github.com/chuoinho/fermataX) (itself a fork of [Fermata](https://github.com/AndreyPavlenko/Fermata)). It keeps only YouTube and adds A/V sync that tunes itself.
 
 - **Delayed video instead of earlier audio.** Audio that is already in the car's buffer can't be sped up, so the app holds the picture back. YouTube keeps playing normally. The frames are copied to a canvas and shown X ms later, so they line up with what you hear from the car's speakers.
-- **Automatic delay measurement with the phone's microphone.** The app records about 10 seconds of what the car's speakers actually play. It compares that with the video's own soundtrack and finds the lag by cross-correlation. In auto mode this repeats on its own: about 10 seconds after a new video starts (a short 6-second measurement, applied right away when the result is clear, so the picture is usually in sync within about 20 seconds), after a buffering stall, and every 60 seconds (every 3 minutes once the delay has settled). Each new video starts with fresh measurements, because the lag differs from video to video. A single measurement is noisy (±20–30 ms), so fine-tuning uses the median of the last five measurements. A big jump, for example after a stall, needs two clear measurements in a row that agree. Changes are applied gradually so the picture doesn't jump.
+- **Automatic delay measurement with the phone's microphone.** The app records about 10 seconds of what the car's speakers actually play. It compares that with the video's own soundtrack and finds the lag by cross-correlation. In auto mode this repeats on its own: about 4 seconds after a new video starts (short 6-second measurements, the first clear one is applied right away, so the picture is usually in sync within 10–20 seconds), after a buffering stall, and every 20 seconds (every minute once the delay has settled). Each new video starts with fresh measurements, because the lag differs from video to video. A single measurement is noisy (±20–30 ms), so fine-tuning uses the median of the last five measurements. A big jump, for example after a stall, needs two measurements that agree (one of them clear), or three of any kind. Changes are applied gradually so the picture doesn't jump.
 - **Learns your correction.** If you nudge the delay by hand right after a measurement, it remembers the difference and applies it from then on.
 - **Separate settings for USB and wireless Android Auto.** These connections have different latency, so each keeps its own delay. On the phone screen the delay is 0.
 - **YouTube only.** The app opens straight into YouTube. The car's side rail has just **Home, History, Back, Refresh, Settings**, and Settings is one short page: appearance, language, YouTube options (quality limit, ad skipping, SponsorBlock, auto fullscreen) and the sync badge. You can sign in to YouTube on the phone once, and the car uses the same session.
@@ -79,7 +79,7 @@ Then Android Auto is hiding the video app. This usually comes from the way the A
 
 1. Uninstall xFermaTube and install it again **through AAenabler** (step 3 above).
 2. **Check the install source** (v1.0.2 and later): open xFermaTube on the phone → gear icon in the top bar → **Android Auto install check**. *Installer* must be `com.android.vending (Google Play Store)`, which is what AAenabler sets. With another installer Android Auto most likely hides the video app.
-3. Not Google Play Store? **Fix it on the phone** with **Fix now**: see [the steps below](#fix-the-install-source-on-the-phone).
+3. Can't use AAenabler? Try the experimental **Fix now**: see [the steps below](#fix-the-install-source-on-the-phone).
 4. Or install from a PC: `adb install -r -i com.android.vending xFermaTube-v1.0.2-arm64.apk`
 5. Check that **Unknown sources** is ticked (step 1 above).
 6. Force stop Android Auto and reconnect to the car.
@@ -91,7 +91,9 @@ When you ask for help, tap **Copy** in the install check and paste the report: i
 
 ### Fix the install source on the phone
 
-For v1.0.2 and later, Android 11 or later. No PC needed, your settings are kept.
+**Experimental.** For v1.0.2 and later, Android 11 or later. No PC needed, your settings are kept.
+
+The app reinstalls itself with Google Play Store as the install source. That part works (confirmed on Samsung and Xiaomi), and the Android Auto desktop simulator then shows the video app. In my first car test the video app still did not show up, and it appeared after I reinstalled through AAenabler. I haven't found out why yet. So try AAenabler first, use this when AAenabler is not an option, and please tell me whether it helped in your car.
 
 1. Download the latest APK and install it over the old version (just open the file).
 2. Open xFermaTube on the phone and tap **Fix now**. If it doesn't ask: gear icon → **Android Auto install check** → **Fix now**.
