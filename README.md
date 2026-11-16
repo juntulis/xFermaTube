@@ -78,12 +78,15 @@ To update, install the new APK over the old one the same way. Your settings are 
 Then Android Auto is hiding the video app. This usually comes from the way the APK was installed:
 
 1. Uninstall xFermaTube and install it again **through AAenabler** (step 3 above).
-   To check how it was installed: phone Settings → Apps → xFermaTube → the install source line at the bottom of the page. On my phone it says *App downloaded from AAEnabler*. If yours names the system package installer, the install did not go through the helper app.
-2. Check that **Unknown sources** is ticked (step 1 above).
-3. Force stop Android Auto and reconnect to the car.
-4. On the phone, open Android Auto settings → **Customize launcher** and check that xFermaTube is ticked.
+2. **Check the install source** (v1.0.2 and later): open xFermaTube on the phone → gear icon in the top bar → **Android Auto install check**. *Installer* must be `com.android.vending (Google Play Store)`, which is what AAenabler sets. With another installer Android Auto most likely hides the video app.
+3. Still not Google Play Store after installing through AAenabler? Then the phone's own installer ignores the request (reported on Xiaomi / HyperOS). Install from a PC instead: `adb install -r -i com.android.vending xFermaTube-v1.0.2-arm64.apk`
+4. Check that **Unknown sources** is ticked (step 1 above).
+5. Force stop Android Auto and reconnect to the car.
+6. On the phone, open Android Auto settings → **Customize launcher** and check that xFermaTube is ticked.
 
 If the original FermataX doesn't show its video app in your car either, the problem is in the Android Auto setup, not in this app.
+
+When you ask for help, tap **Copy** in the install check and paste the report: it contains no personal data (app version, phone model, Android Auto version, install source).
 
 ## Using it in the car
 

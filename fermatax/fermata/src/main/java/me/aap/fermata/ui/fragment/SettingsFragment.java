@@ -512,8 +512,17 @@ public class SettingsFragment extends MainActivityFragment
 		addSectionHeader(set, ctx, R.string.about_support);
 		set.addButton(o -> {
 			o.title = R.string.app_version;
-			o.csubtitle = "v" + BuildConfig.VERSION_NAME + " (" + BuildConfig.VERSION_CODE + ")";
+			o.csubtitle = "xFermaTube " + me.aap.fermata.xf.XfConfig.RELEASE + " (FermataX " +
+					BuildConfig.VERSION_NAME + " / " + BuildConfig.VERSION_CODE + ")";
 		});
+		// Tik telefone: ataskaitą reikia nukopijuoti ar persiųsti, o automobilio ekrane to nepadarysi.
+		if (!a.isCarActivity()) {
+			set.addButton(o -> {
+				o.title = R.string.xf_aa_check;
+				o.subtitle = R.string.xf_aa_check_sub;
+				o.onClick = () -> me.aap.fermata.xf.XfInstallReport.show(a);
+			});
+		}
 	}
 
 	/** The Readiness Phone Apps row opens the page; Back then returns to Addons. */

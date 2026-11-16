@@ -17,6 +17,10 @@
 Android Auto cannot show this request on the car screen, so it is asked here.</string>
     <string name="xf_mic_allow" translatable="false">Allow</string>
     <string name="xf_mic_later" translatable="false">Not now</string>
+    <string name="xf_aa_check" translatable="false">Android Auto install check</string>
+    <string name="xf_aa_check_sub" translatable="false">Shows how the app was installed. Use it when Android Auto shows only the audio entry.</string>
+    <string name="xf_share" translatable="false">Share</string>
+    <string name="xf_close" translatable="false">Close</string>
     <string name="xf_history" translatable="false">History</string>
     <string name="engine_mp_name" translatable="false">MediaPlayer</string>
     <string name="engine_exo_name" translatable="false">ExoPlayer</string>

@@ -681,6 +681,16 @@ public class YoutubeFragment extends WebBrowserFragment
 					me.aap.fermata.R.string.fullscreen_mode));
 			refresh.setContentDescription(tb.getContext().getString(
 					me.aap.fermata.R.string.refresh));
+			// xFermaTube: telefone nėra šoninio meniu, todėl nustatymai pasiekiami iš viršutinės juostos.
+			if (me.aap.fermata.xf.XfConfig.YOUTUBE_ONLY &&
+					!MainActivityDelegate.get(tb.getContext()).isCarActivity()) {
+				ImageButton settings = addButton(tb, me.aap.fermata.R.drawable.settings, this,
+						R.id.xf_settings);
+				settings.setMinimumWidth(minSize);
+				settings.setMinimumHeight(minSize);
+				settings.setContentDescription(tb.getContext().getString(
+						me.aap.fermata.R.string.settings));
+			}
 			updateVisibility(tb, f);
 		}
 
@@ -705,6 +715,11 @@ public class YoutubeFragment extends WebBrowserFragment
 					YoutubeWebView web = youtube.getWebView();
 					if (web != null) web.enterManualFullScreen();
 				}
+				return;
+			}
+			if (v.getId() == R.id.xf_settings) {
+				MainActivityDelegate.get(v.getContext()).showFragment(
+						me.aap.fermata.R.id.settings_fragment);
 				return;
 			}
 			if (v.getId() == me.aap.fermata.R.id.refresh) {
@@ -732,6 +747,8 @@ public class YoutubeFragment extends WebBrowserFragment
 			// Reload is not useful while a video fills the screen.
 			View refresh = tb.findViewById(me.aap.fermata.R.id.refresh);
 			if (refresh != null) refresh.setVisibility(a.isVideoMode() ? GONE : VISIBLE);
+			View settings = tb.findViewById(R.id.xf_settings);
+			if (settings != null) settings.setVisibility(a.isVideoMode() ? GONE : VISIBLE);
 			tb.setVisibility(getVisibility(tb, f));
 			TopBarController.refresh(a, f);
 		}

@@ -7,6 +7,7 @@
     <item name="desktop_version" type="id" />
     <item name="fullscreen" type="id" />
     <item name="fullscreen_exit" type="id" />
+    <item name="xf_settings" type="id" />
     <item name="video_scaling_fill_proportional" type="id" />
     <item name="video_quality" type="id" />
     <item name="yt_auto_fullscreen" type="id" />
