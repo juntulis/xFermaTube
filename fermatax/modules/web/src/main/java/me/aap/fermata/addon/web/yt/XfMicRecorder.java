@@ -178,7 +178,7 @@ final class XfMicRecorder {
 
 	private static String typeName(int type) {
 		return switch (type) {
-			case AudioDeviceInfo.TYPE_BUILTIN_MIC -> "telefonas";
+			case AudioDeviceInfo.TYPE_BUILTIN_MIC -> "phone";
 			case AudioDeviceInfo.TYPE_BLUETOOTH_SCO -> "bluetooth";
 			case AudioDeviceInfo.TYPE_USB_DEVICE, AudioDeviceInfo.TYPE_USB_HEADSET -> "usb";
 			case AudioDeviceInfo.TYPE_BUS -> "bus";

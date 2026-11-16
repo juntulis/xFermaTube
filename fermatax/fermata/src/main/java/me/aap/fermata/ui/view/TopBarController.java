@@ -35,6 +35,10 @@ public final class TopBarController {
 	public static void refresh(MainActivityDelegate activity,
 			@Nullable ActivityFragment fragment) {
 		if (fragment == null) return;
+		// xFermaTube: a fragment that is being added (e.g. Settings opened from fullscreen video) is
+		// already "active" but not attached yet; reading its title would abort the transaction.
+		// The bar is refreshed again once the fragment change is complete.
+		if (fragment.getContext() == null) return;
 		ToolBarView toolBar = activity.getToolBar();
 		if (toolBar == null) return;
 		if (!applyVisibility(toolBar, fragment)) return;

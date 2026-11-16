@@ -630,6 +630,10 @@ public class YoutubeWebView extends FermataWebView {
 				        return;
 				      }
 				      event(%d, null);
+				      // xFermaTube: in immersive video mode the tap belongs to the app panel only.
+				      // YouTube's hidden player would otherwise pause on a second tap within ~3 s.
+				      if (%b && document.documentElement.classList.contains('fermata-yt-immersive'))
+				        e.stopPropagation();
 				    }, true);
 				    v.addEventListener('touchend', function() {
 				      if (isActiveVideo(v) && window.__fermataFullscreenTapEnabled !== true)
@@ -712,7 +716,8 @@ public class YoutubeWebView extends FermataWebView {
 				JS_EVENT, PLAYBACK_SIGNAL_JS, YoutubeSelectionRouting.clickScript(JS_PLAYBACK_INTENT),
 				JS_VIDEO_PLAYING, JS_VIDEO_READY, JS_VIDEO_PLAYING,
 				JS_VIDEO_PAUSED, JS_VIDEO_ENDED, JS_VIDEO_FULLSCREEN_TAP,
-				JS_VIDEO_TOUCHED, JS_VIDEO_TOUCHED, JS_NAVIGATION), null);
+				JS_VIDEO_TOUCHED, me.aap.fermata.xf.XfConfig.YOUTUBE_ONLY, JS_VIDEO_TOUCHED,
+				JS_NAVIGATION), null);
 	}
 
 	void syncPlaybackState() {
