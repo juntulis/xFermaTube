@@ -13,13 +13,14 @@
 </p>
 
 > [!IMPORTANT]
-> **Quick install** (v1.0.3-beta.2 and later: no helper app, PC or Wi‑Fi needed)
+> **Quick install** (v1.0.3-beta.3 and later: no helper app, PC or Wi‑Fi needed)
 > 1. Download the APK and open it to install.
 > 2. Open xFermaTube on the phone and tap **Fix now** → **Open the setting** (allow) → **Reinstall now** → **Update**. Without this Android Auto shows only the audio entry and hides the video app.
 > 3. On the phone: Android Auto settings → tap **Version** 10 times → ⋮ → **Developer settings** → tick **Unknown sources**.
 > 4. Open xFermaTube on the phone again and allow the **microphone**.
 > 5. In the car, open **xFermaTube** (play icon), not *xF Audio* (speaker icon).
 > 6. **Sync is not instant.** The app has to listen first: give each new video up to a minute before sound and picture line up.
+> 7. **Set the sound once by hand.** Every phone hears the car's speakers with a different lag, and the app can't know yours. If the sound is still slightly off after auto sync, tap the **⏱** label on the video and press **−10** or **+10** until lips and sound match. The app remembers it for every later video. [More](#using-it-in-the-car)
 >
 > On v1.0.2 (the latest stable release) install through AAenabler instead: see the [install guide](#install).
 
@@ -56,14 +57,14 @@ I built this to fix one annoying problem for myself, not to make money or collec
 - **Fully open source (GPL-3.0).** All the code is in this repo. You can read it and build the APK yourself.
 - **No ads, analytics or tracking added.** There are no analytics or crash-reporting SDKs, no accounts and no xFermata server. Nothing is sent to me.
 - **The microphone stays on the phone.** It is used only for the sync measurement and only while a video is playing. The recording is turned into a loudness curve in memory to find the delay, and the audio is never saved or uploaded. See [`XfMicRecorder.java`](fermatax/modules/web/src/main/java/me/aap/fermata/addon/web/yt/XfMicRecorder.java).
-- **Few permissions.** The APK declares internet, microphone, notifications and media playback, plus a few routine ones (network and Wi-Fi state, wake lock, audio settings). Since v1.0.3-beta.2 it also declares the permission to request installs: **Fix now** uses it only to reinstall xFermaTube itself, it does nothing until you allow it in the phone's settings, and you can turn it off again afterwards. The location, camera, storage, screen overlay, boot and system-settings permissions that FermataX declares are removed.
+- **Few permissions.** The APK declares internet, microphone, notifications and media playback, plus a few routine ones (network and Wi-Fi state, wake lock, audio settings). Since v1.0.3-beta.3 it also declares the permission to request installs: **Fix now** uses it only to reinstall xFermaTube itself, it does nothing until you allow it in the phone's settings, and you can turn it off again afterwards. The location, camera, storage, screen overlay, boot and system-settings permissions that FermataX declares are removed.
 - **YouTube is the normal mobile YouTube site.** Google's own privacy policy applies, the same as in any browser.
 
 ## Install
 
 Android Auto only shows video apps that look like they came from the Play Store. Opening the APK from the browser or a file manager is not enough on its own: Android Auto then shows only the audio entry.
 
-Since **v1.0.3-beta.2** the app fixes this itself. You install the APK the normal way, and the app then asks the phone's own installer to install it once more, marked as coming from Google Play. No helper app, PC or Wi‑Fi is needed. I tested it in my car with a Samsung phone on Android 17: after a plain install the video app was missing, and after **Fix now** it showed up.
+Since **v1.0.3-beta.3** the app fixes this itself. You install the APK the normal way, and the app then asks the phone's own installer to install it once more, marked as coming from Google Play. No helper app, PC or Wi‑Fi is needed. I tested it in my car with a Samsung phone on Android 17: after a plain install the video app was missing, and after **Fix now** it showed up.
 
 1. **Turn on Unknown sources in Android Auto.** On the phone: Android Auto settings → scroll down and tap **Version** 10 times → **⋮** (top right) → **Developer settings** → tick **Unknown sources**.
 2. **Download the APK** from the [v1.0.3-beta.3 release](../../releases/tag/v1.0.3-beta.3) (arm64 phones only) and open it to install. If Google Play Protect asks about the app, let it scan or choose to install anyway.
@@ -89,7 +90,7 @@ To update, open the new APK over the old one. Your settings are kept. The app ma
 Then Android Auto is hiding the video app. This usually comes from the way the APK was installed:
 
 1. **Check the install record:** open xFermaTube on the phone → gear icon in the top bar → **Android Auto install check**. *Installer* must be `com.android.vending (Google Play Store)` and *Initiated by* must be the phone's package installer. The last line of the report says whether Android Auto accepts it.
-2. **Not accepted?** On v1.0.3-beta.2 and later tap **Fix now**: see [the steps below](#fix-the-install-source-on-the-phone). On v1.0.2 and older, install the newer APK over it first, or uninstall and install through AAenabler.
+2. **Not accepted?** On v1.0.3-beta.3 and later tap **Fix now**: see [the steps below](#fix-the-install-source-on-the-phone). On v1.0.2 and older, install the newer APK over it first, or uninstall and install through AAenabler.
 3. Check that **Unknown sources** is ticked (step 1 above).
 4. Unplug the phone and connect to the car again. Still missing? Force stop Android Auto on the phone and reconnect.
 5. Look for the app on the **car screen**, not in the phone's *Customize launcher* list: without a connected car that list may show only *xF Audio* even when everything is fine.
@@ -102,7 +103,7 @@ When you ask for help, tap **Copy** in the install check and paste the report: i
 
 ### Fix the install source on the phone
 
-For v1.0.3-beta.2 and later, Android 11 or later. No PC, Wi‑Fi or helper app is needed, and your settings and sign‑in are kept.
+For v1.0.3-beta.3 and later, Android 11 or later. No PC, Wi‑Fi or helper app is needed, and your settings and sign‑in are kept.
 
 The app asks the phone's own installer to install it again, with Google Play Store recorded as the installer. This is the same record that AAenabler leaves. You confirm the install yourself with one tap.
 
@@ -117,6 +118,9 @@ Confirmed in my car with a Samsung phone on Android 17. On some phones the insta
 Xiaomi / HyperOS: if the phone blocks the second way, turn on **Install via USB** and **USB debugging (Security settings)** in Developer options and tap **Try again**.
 
 ## Using it in the car
+
+> [!IMPORTANT]
+> **Set the sound once by hand (new in v1.0.3-beta.3).** Auto sync measures the delay through the phone's microphone, and every phone adds its own lag to that measurement. I can't know it for your phone. So after the first auto sync, check a video with someone talking. If the sound is slightly early or late, tap **⏱**, then **−10** or **+10** until lips and sound match. You do this once: the app remembers the correction and adds it to every later measurement.
 
 **Sync is not instant.** The app can't know the delay in advance: it has to hear the car's speakers through the phone's microphone and compare that with the video's soundtrack. For each new video it can take up to a minute before sound and picture line up. It can take longer when the audio is quiet, the car is noisy, or the music is very rhythmic. Until then the video uses the delay from the previous video. The sound must be audible in the cabin: with the volume at zero there is nothing to measure.
 
