@@ -281,8 +281,8 @@
     <string name="private_key_pass">Пароль приватного ключа</string>
 
     <string name="donate">Поддержать разработчика</string>
-    <string name="donate_text">Поддержите FermataX через Ko-fi.</string>
-    <string name="use_phone_for_donation">Откройте Ko-fi на телефоне, чтобы поддержать FermataX.</string>
+    <string name="donate_text">Поддержите xFermaTube через Ko-fi.</string>
+    <string name="use_phone_for_donation">Откройте Ko-fi на телефоне, чтобы поддержать xFermaTube.</string>
 
     <string name="timer">Таймер</string>
     <string name="hours">Часы</string>
@@ -491,8 +491,8 @@
     <string name="about_support">О приложении и поддержка</string>
     <string name="app_version">Версия</string>
     <string name="support_kofi_title">Угостить разработчика кофе ☕</string>
-    <string name="support_kofi_sub">Поддержите разработку на ko-fi.com/fermatax</string>
-    <string name="support_banner_text">Нравится FermataX? Поддержите проект чашкой кофе ☕</string>
+    <string name="support_kofi_sub">Поддержите разработку на ko-fi.com/namele55</string>
+    <string name="support_banner_text">Нравится xFermaTube? Поддержите проект чашкой кофе ☕</string>
 
     <!-- Initial Setup Permissions -->
     <string name="initial_setup_permissions_title">Разрешения</string>

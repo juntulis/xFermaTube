@@ -272,8 +272,8 @@
     <string name="private_key">Private Key</string>
     <string name="private_key_pass">Private Key Passwort</string>
     <string name="donate">Entwickler unterstützen</string>
-    <string name="donate_text">Unterstützen Sie FermataX über Ko-fi.</string>
-    <string name="use_phone_for_donation">Öffnen Sie Ko-fi auf Ihrem Telefon, um FermataX zu unterstützen.</string>
+    <string name="donate_text">Unterstützen Sie xFermaTube über Ko-fi.</string>
+    <string name="use_phone_for_donation">Öffnen Sie Ko-fi auf Ihrem Telefon, um xFermaTube zu unterstützen.</string>
     <string name="timer">Timer</string>
     <string name="hours">Stunden</string>
     <string name="minutes">Minuten</string>
@@ -413,8 +413,8 @@
     <string name="about_support">Über &amp; Support</string>
     <string name="app_version">Version</string>
     <string name="support_kofi_title">Spendier mir einen Kaffee ☕</string>
-    <string name="support_kofi_sub">Unterstützen Sie die Entwicklung auf ko-fi.com/fermatax</string>
-    <string name="support_banner_text">Gefällt Ihnen FermataX? Unterstützen Sie mit einem Kaffee ☕</string>
+    <string name="support_kofi_sub">Unterstützen Sie die Entwicklung auf ko-fi.com/namele55</string>
+    <string name="support_banner_text">Gefällt Ihnen xFermaTube? Unterstützen Sie mit einem Kaffee ☕</string>
     <string name="initial_setup_permissions_title">Berechtigungen</string>
     <string name="initial_setup_privacy">Datenschutz: FermataX sammelt keine persönlichen Daten und sendet sie nicht an den Entwickler. Einige Funktionen (Wetter, Karten, Erweiterungen, Sprache, Standort) verbinden sich direkt mit Drittanbietern. Auf Telefonen mit Google Play Services kann Google den Standort gemäß den Einstellungen für die Google Standortgenauigkeit des Geräts verarbeiten. FermataX sendet keine Standorte an eigene Server.</string>
     <string name="initial_setup_required">Für Hauptfunktionen erforderlich</string>

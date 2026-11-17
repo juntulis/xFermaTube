@@ -396,8 +396,8 @@ Android Auto cannot show this request on the car screen, so it is asked here.</s
     <string name="private_key_pass">Private key password</string>
 
 	<string name="donate">Support developer</string>
-    <string name="donate_text">Support FermataX on Ko-fi.</string>
-    <string name="use_phone_for_donation">Open Ko-fi on your phone to support FermataX.</string>
+    <string name="donate_text">Support xFermaTube on Ko-fi.</string>
+    <string name="use_phone_for_donation">Open Ko-fi on your phone to support xFermaTube.</string>
 
     <string name="timer">Timer</string>
     <string name="hours">Hours</string>
@@ -548,8 +548,8 @@ Android Auto cannot show this request on the car screen, so it is asked here.</s
     <string name="about_support">About &amp; Support</string>
     <string name="app_version">Version</string>
     <string name="support_kofi_title">Buy Me a Coffee ☕</string>
-    <string name="support_kofi_sub">Support development at ko-fi.com/fermatax</string>
-    <string name="support_banner_text">Enjoying FermataX? Support with a coffee ☕</string>
+    <string name="support_kofi_sub">Support development at ko-fi.com/namele55</string>
+    <string name="support_banner_text">Enjoying xFermaTube? Support with a coffee ☕</string>
 
     <!-- Initial Setup Permissions -->
     <string name="initial_setup_permissions_title">Permissions</string>

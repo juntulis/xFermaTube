@@ -295,8 +295,8 @@
 	<string name="private_key_pass">Mật khẩu khóa riêng</string>
 
     <string name="donate">Ủng hộ nhà phát triển</string>
-    <string name="donate_text">Ủng hộ FermataX qua Ko-fi.</string>
-    <string name="use_phone_for_donation">Mở Ko-fi trên điện thoại để ủng hộ FermataX.</string>
+    <string name="donate_text">Ủng hộ xFermaTube qua Ko-fi.</string>
+    <string name="use_phone_for_donation">Mở Ko-fi trên điện thoại để ủng hộ xFermaTube.</string>
 
     <string name="timer">Hẹn giờ</string>
     <string name="hours">Giờ</string>
@@ -492,8 +492,8 @@
     <string name="about_support">Giới thiệu &amp; Hỗ trợ</string>
     <string name="app_version">Phiên bản</string>
     <string name="support_kofi_title">Mua tặng tác giả ly cà phê ☕</string>
-    <string name="support_kofi_sub">Ủng hộ dự án tại ko-fi.com/fermatax</string>
-    <string name="support_banner_text">Thích FermataX? Mời dev ly cà phê nhé ☕</string>
+    <string name="support_kofi_sub">Ủng hộ dự án tại ko-fi.com/namele55</string>
+    <string name="support_banner_text">Thích xFermaTube? Mời dev ly cà phê nhé ☕</string>
 
     <!-- Initial Setup Permissions -->
     <string name="initial_setup_permissions_title">Quyền truy cập</string>

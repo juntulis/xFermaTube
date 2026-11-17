@@ -288,8 +288,8 @@
     <string name="private_key_pass">Palavra-passe da chave privada</string>
 
     <string name="donate">Apoiar o desenvolvedor</string>
-    <string name="donate_text">Apoie o FermataX no Ko-fi.</string>
-    <string name="use_phone_for_donation">Abra o Ko-fi no seu telefone para apoiar o FermataX.</string>
+    <string name="donate_text">Apoie o xFermaTube no Ko-fi.</string>
+    <string name="use_phone_for_donation">Abra o Ko-fi no seu telefone para apoiar o xFermaTube.</string>
 
     <string name="timer">Temporizador</string>
     <string name="hours">Horas</string>
@@ -496,8 +496,8 @@
     <string name="about_support">Sobre e suporte</string>
     <string name="app_version">Versão</string>
     <string name="support_kofi_title">Pague-me um café ☕</string>
-    <string name="support_kofi_sub">Apoie o desenvolvimento em ko-fi.com/fermatax</string>
-    <string name="support_banner_text">Gostou do FermataX? Apoie o projeto com um café ☕</string>
+    <string name="support_kofi_sub">Apoie o desenvolvimento em ko-fi.com/namele55</string>
+    <string name="support_banner_text">Gostou do xFermaTube? Apoie o projeto com um café ☕</string>
 
     <!-- Initial Setup Permissions -->
     <string name="initial_setup_permissions_title">Permissões</string>

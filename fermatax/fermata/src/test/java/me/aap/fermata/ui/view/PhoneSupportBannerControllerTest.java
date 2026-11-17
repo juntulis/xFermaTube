@@ -13,7 +13,7 @@ public class PhoneSupportBannerControllerTest {
 
 	@Test
 	public void bannerConfigValuesConformToRequirements() {
-		assertEquals("https://ko-fi.com/fermatax", PhoneSupportBannerController.DONATE_URL);
+		assertEquals("https://ko-fi.com/namele55", PhoneSupportBannerController.DONATE_URL);
 		assertTrue("Duration must be between 3s and 5s",
 				PhoneSupportBannerController.DISPLAY_DURATION_MS >= 3000L &&
 				PhoneSupportBannerController.DISPLAY_DURATION_MS <= 5000L);

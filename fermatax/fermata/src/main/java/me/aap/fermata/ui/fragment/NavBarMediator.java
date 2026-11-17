@@ -52,7 +52,7 @@ import me.aap.utils.ui.view.ScalableTextView;
  */
 public class NavBarMediator extends PrefNavBarMediator
 		implements AddonManager.Listener, OverlayMenu.SelectionHandler {
-	private static final String DONATE_URL = "https://ko-fi.com/fermatax/";
+	private static final String DONATE_URL = "https://ko-fi.com/namele55/";
 
 	@Override
 	protected List<NavBarItem> getItems(NavBarView nb) {

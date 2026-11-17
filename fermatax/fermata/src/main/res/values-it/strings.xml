@@ -272,8 +272,8 @@
     <string name="private_key">Chiave privata</string>
     <string name="private_key_pass">Password chiave privata</string>
     <string name="donate">Supporta lo sviluppatore</string>
-    <string name="donate_text">Supporta FermataX su Ko-fi.</string>
-    <string name="use_phone_for_donation">Apri Ko-fi sul telefono per supportare FermataX.</string>
+    <string name="donate_text">Supporta xFermaTube su Ko-fi.</string>
+    <string name="use_phone_for_donation">Apri Ko-fi sul telefono per supportare xFermaTube.</string>
     <string name="timer">Timer</string>
     <string name="hours">Ore</string>
     <string name="minutes">Minuti</string>
@@ -413,8 +413,8 @@
     <string name="about_support">Informazioni e supporto</string>
     <string name="app_version">Versione</string>
     <string name="support_kofi_title">Offrimi un caffè ☕</string>
-    <string name="support_kofi_sub">Supporta lo sviluppo su ko-fi.com/fermatax</string>
-    <string name="support_banner_text">Ti piace FermataX? Supportalo con un caffè ☕</string>
+    <string name="support_kofi_sub">Supporta lo sviluppo su ko-fi.com/namele55</string>
+    <string name="support_banner_text">Ti piace xFermaTube? Supportalo con un caffè ☕</string>
     <string name="initial_setup_permissions_title">Autorizzazioni</string>
     <string name="initial_setup_privacy">Privacy: FermataX non raccoglie né invia dati personali allo sviluppatore. Alcune funzioni (meteo, mappe, componenti aggiuntivi, voce, posizione) si collegano direttamente a servizi esterni. Sui telefoni con Google Play Services, Google può elaborare la posizione secondo le impostazioni di Precisione della geolocalizzazione Google del dispositivo. FermataX non invia posizioni ai propri server.</string>
     <string name="initial_setup_required">Necessario per le funzioni principali</string>

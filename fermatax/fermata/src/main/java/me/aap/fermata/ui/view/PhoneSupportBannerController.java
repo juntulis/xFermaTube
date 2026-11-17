@@ -25,7 +25,7 @@ import me.aap.utils.ui.UiUtils;
  */
 public final class PhoneSupportBannerController implements MainActivityListener {
 	private static final String TAG = "PhoneSupportBanner";
-	public static final String DONATE_URL = "https://ko-fi.com/fermatax";
+	public static final String DONATE_URL = "https://ko-fi.com/namele55";
 	public static final long DISPLAY_DURATION_MS = 4000L;
 	public static final long INITIAL_DELAY_MS = 600L;
 	public static final long MIN_RESUME_INTERVAL_MS = 10000L;

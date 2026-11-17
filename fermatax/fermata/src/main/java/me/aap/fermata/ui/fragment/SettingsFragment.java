@@ -424,7 +424,7 @@ public class SettingsFragment extends MainActivityFragment
 				o.title = R.string.support_kofi_title;
 				o.subtitle = R.string.support_kofi_sub;
 				o.icon = R.drawable.coffee;
-				o.onClick = () -> Utils.openUrl(ctx, "https://ko-fi.com/fermatax");
+				o.onClick = () -> Utils.openUrl(ctx, "https://ko-fi.com/namele55");
 			});
 		}
 

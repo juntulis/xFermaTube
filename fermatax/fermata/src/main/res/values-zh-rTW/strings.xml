@@ -288,8 +288,8 @@
     <string name="private_key_pass">私密金鑰密碼</string>
 
     <string name="donate">支持開發者</string>
-    <string name="donate_text">透過 Ko-fi 支持 FermataX。</string>
-    <string name="use_phone_for_donation">請在手機上開啟 Ko-fi 以支持 FermataX。</string>
+    <string name="donate_text">透過 Ko-fi 支持 xFermaTube。</string>
+    <string name="use_phone_for_donation">請在手機上開啟 Ko-fi 以支持 xFermaTube。</string>
 
     <string name="timer">計時器</string>
     <string name="hours">小時</string>
@@ -496,8 +496,8 @@
     <string name="about_support">關於與支援</string>
     <string name="app_version">版本</string>
     <string name="support_kofi_title">請開發者喝杯咖啡 ☕</string>
-    <string name="support_kofi_sub">前往 ko-fi.com/fermatax 支持開發</string>
-    <string name="support_banner_text">喜歡 FermataX 嗎？請喝杯咖啡支持開發 ☕</string>
+    <string name="support_kofi_sub">前往 ko-fi.com/namele55 支持開發</string>
+    <string name="support_banner_text">喜歡 xFermaTube 嗎？請喝杯咖啡支持開發 ☕</string>
 
     <!-- Initial Setup Permissions -->
     <string name="initial_setup_permissions_title">權限</string>
