@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <b><a href="../../releases/tag/v1.0.3-beta.2">⬇ Download the APK (v1.0.3-beta.2)</a></b> · <a href="#install">Full install guide</a>
+  <b><a href="../../releases/tag/v1.0.3-beta.3">⬇ Download the APK (v1.0.3-beta.3)</a></b> · <a href="#install">Full install guide</a>
 </p>
 
 > [!IMPORTANT]
@@ -66,7 +66,7 @@ Android Auto only shows video apps that look like they came from the Play Store.
 Since **v1.0.3-beta.2** the app fixes this itself. You install the APK the normal way, and the app then asks the phone's own installer to install it once more, marked as coming from Google Play. No helper app, PC or Wi‑Fi is needed. I tested it in my car with a Samsung phone on Android 17: after a plain install the video app was missing, and after **Fix now** it showed up.
 
 1. **Turn on Unknown sources in Android Auto.** On the phone: Android Auto settings → scroll down and tap **Version** 10 times → **⋮** (top right) → **Developer settings** → tick **Unknown sources**.
-2. **Download the APK** from the [v1.0.3-beta.2 release](../../releases/tag/v1.0.3-beta.2) (arm64 phones only) and open it to install. If Google Play Protect asks about the app, let it scan or choose to install anyway.
+2. **Download the APK** from the [v1.0.3-beta.3 release](../../releases/tag/v1.0.3-beta.3) (arm64 phones only) and open it to install. If Google Play Protect asks about the app, let it scan or choose to install anyway.
 3. **Open xFermaTube on the phone.** It says *Android Auto may hide the video app*. Tap **Fix now**, then:
    - **Open the setting** → turn on *Allow from this source* for xFermaTube → go back to the app. This is asked once.
    - **Reinstall now** → **Update** in the installer window.
@@ -122,9 +122,12 @@ Xiaomi / HyperOS: if the phone blocks the second way, turn on **Install via USB*
 
 Tap the faint **⏱ X ms** label at the top left of the video to see the controls:
 
-- **−100 / −10 / +10 / +100** adjust the delay by hand.
-- **🎤** measures the delay once.
+- **−10 / +10** fine-tune the delay by hand. Do it right after a measurement: the app remembers your correction, applies it to every later measurement and shows it in the label, for example **⏱ 480 ms (+30)**. The buttons are greyed out while the microphone is measuring.
 - **Auto** turns automatic measurement on or off (green = on).
+
+**Why there is a manual correction.** The measurement itself is not free of delay. The sound travels from the car's speakers to the phone, and the phone's microphone and audio system need some time before the app gets the recording. The app can't see that time, so the measured value can be off by a few tens of milliseconds. The error is about the same every time, which is why one correction is enough: set it once with **−10 / +10** until lips and sound match, and the app adds it to every later measurement. The number in the label is the delay in use, the number in brackets is your part of it. In my car the sound was still slightly late after auto sync, and a small correction fixed it. This is new in v1.0.3-beta.3 and I have only tried it briefly.
+
+The panel used to have **−100 / +100** and a **🎤** button for a single measurement. I removed them: auto sync does the measuring, and big manual steps only fought with it. After you seek, the app measures again about 3 seconds later.
 
 Tap the label again to close it. If you don't need it, hide it in Settings → *Show A/V sync badge*: the delay and auto sync keep working.
 

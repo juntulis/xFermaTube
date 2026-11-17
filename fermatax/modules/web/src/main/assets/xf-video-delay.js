@@ -257,6 +257,8 @@
       'background:rgba(255,255,255,.18);color:#fff;font:600 16px/40px sans-serif;cursor:pointer}' +
       '#xf-delay-ui .xf-step,#xf-delay-ui .xf-diag{display:none}' +
       '#xf-delay-ui.xf-open .xf-step{display:inline-block}' +
+      '#xf-delay-ui .xf-gone{display:none!important}' +
+      '#xf-delay-ui.xf-busy .xf-adj{opacity:.3;pointer-events:none}' +
       '#xf-delay-ui.xf-open .xf-diag{display:inline-block;font:500 13px/1 monospace;opacity:.8;padding:0 6px}' +
       '#xf-delay-ui .xf-label{min-width:84px;text-align:center;padding:0 4px}' +
       '#xf-delay-ui .xf-meas{font:600 15px/1 sans-serif;padding:0 4px}#xf-delay-ui .xf-meas:empty{display:none}' +
@@ -272,12 +274,14 @@
     document.documentElement.appendChild(s);
   }
 
+  function gone(b) { b.classList.add('xf-gone'); return b; }
   function btn(text, step) {
     var b = document.createElement('button');
-    b.className = 'xf-step';
+    b.className = 'xf-step xf-adj';
     b.textContent = text;
     b.addEventListener('click', function (e) {
       e.stopPropagation(); e.preventDefault();
+      if (measuring) return;
       manualSet(delayMs + step); openUi();
     }, true);
     return b;
@@ -607,6 +611,7 @@
     micOffset = Math.max(-500, Math.min(500, Math.round(v)));
     localStorage.setItem(OFF_KEY, String(micOffset));
     logAuto('offset ' + micOffset);
+    updateLabel();
   }
 
   function stopRamp() { clearInterval(rampTimer); rampTimer = 0; }
@@ -750,7 +755,7 @@
   function buildUi() {
     ui = document.createElement('div');
     ui.id = 'xf-delay-ui';
-    ui.appendChild(btn('−100', -100));
+    ui.appendChild(gone(btn('−100', -100)));
     ui.appendChild(btn('−10', -10));
     label = document.createElement('span');
     label.className = 'xf-label';
@@ -761,9 +766,9 @@
     }, true);
     ui.appendChild(label);
     ui.appendChild(btn('+10', 10));
-    ui.appendChild(btn('+100', 100));
+    ui.appendChild(gone(btn('+100', 100)));
     var mb = document.createElement('button');
-    mb.className = 'xf-step';
+    mb.className = 'xf-step xf-gone';
     mb.textContent = '🎤';
     mb.addEventListener('click', function (e) { e.stopPropagation(); e.preventDefault(); measure(); }, true);
     ui.appendChild(mb);
@@ -785,8 +790,11 @@
 
   function updateLabel() {
     // „A“ = auto režimas įjungtas, 🎤 = šiuo metu matuojama.
-    if (label) label.textContent = '⏱ ' + delayMs + ' ms' + (autoOn && !autoBlocked ? ' A' : '') + (measuring ? ' 🎤' : '');
+    var corr = -micOffset;
+    if (label) label.textContent = '⏱ ' + delayMs + ' ms' + (corr ? ' (' + (corr > 0 ? '+' : '−') + Math.abs(corr) + ')' : '') +
+      (autoOn && !autoBlocked ? ' A' : '') + (measuring ? ' 🎤' : '');
     if (autoBtn) autoBtn.classList.toggle('xf-auto-on', autoOn);
+    if (ui) ui.classList.toggle('xf-busy', !!measuring);
   }
 
   // YouTube garso formatas pagal itag (afmt): delsa Android Auto gali skirtis opus (48 kHz) ir aac (44,1 kHz).
@@ -967,6 +975,13 @@
   }
 
   function onSeek() { flush(); }
+  // Po prasukimo delsa galėjo pasikeisti: matuojam iš naujo iškart (kaip po užstrigimo), nelaukdami eilinio matavimo.
+  function onSeeked() {
+    if (!video || video.paused) return;
+    if (!loose) logAuto('after seek');
+    stableN = 0; loose = true;
+    autoSchedule(AUTO_STALL_MS);
+  }
 
   // Naujas video: seni 🎤 matavimai nebetinka (delsa tarp video skiriasi), renkam iš naujo.
   // Nustatyta delsa lieka, kol nauji matavimai parodys ką kita.
@@ -1033,12 +1048,14 @@
         stop();
         if (video) {
           video.removeEventListener('seeking', onSeek);
+          video.removeEventListener('seeked', onSeeked);
           video.removeEventListener('emptied', onEmptied);
           video.removeEventListener('waiting', onWaiting);
           video.removeEventListener('playing', onPlaying);
         }
         video = v;
         video.addEventListener('seeking', onSeek);
+        video.addEventListener('seeked', onSeeked);
         video.addEventListener('emptied', onEmptied);
         video.addEventListener('waiting', onWaiting);
         video.addEventListener('playing', onPlaying);
