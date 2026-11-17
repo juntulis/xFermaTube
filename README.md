@@ -19,7 +19,7 @@
 > 3. On the phone: Android Auto settings → tap **Version** 10 times → ⋮ → **Developer settings** → tick **Unknown sources**.
 > 4. Open xFermaTube on the phone again and allow the **microphone**.
 > 5. In the car, open **xFermaTube** (play icon), not *xF Audio* (speaker icon).
-> 6. **Do the one-time sync check (new in v1.0.3-beta.4).** The first time xFermaTube is open on the car screen, the phone offers it. Park, tap **Start**, point the phone's back camera at the car screen and hold still for about a minute. The car flashes and beeps, the phone measures the difference and fixes it. You do it once per connection type (USB / wireless). [More](#the-one-time-sync-check)
+> 6. **Do the one-time sync check (new in v1.0.3).** The first time xFermaTube is open on the car screen, the phone offers it. Park, tap **Start**, point the phone's back camera at the car screen and hold still for about a minute. The car flashes and beeps, the phone measures the difference and fixes it. You do it once per connection type (USB / wireless). [More](#the-one-time-sync-check)
 > 7. **Sync is not instant.** After that, auto sync listens to each new video first: give it up to a minute before sound and picture line up.
 >
 > Older versions (v1.0.2 and earlier) have no **Fix now**: install those through AAenabler, see the [install guide](#install).
@@ -60,7 +60,7 @@ I built this to fix one annoying problem for myself, not to make money or collec
 - **No ads, analytics or tracking added.** There are no analytics or crash-reporting SDKs, no accounts and no xFermata server. Nothing is sent to me.
 - **The microphone stays on the phone.** It is used only for the sync measurement and only while a video (or the sync check) is playing. The recording is turned into a loudness curve in memory to find the delay, and the audio is never saved or uploaded. See [`XfMicRecorder.java`](fermatax/modules/web/src/main/java/me/aap/fermata/addon/web/yt/XfMicRecorder.java).
 - **The camera is used only during the one-time sync check.** It is asked for when you tap **Start**, not at install. Each frame is turned into one brightness number in memory to find the flashes; no picture is saved or uploaded. See [`XfCamSync.java`](fermatax/modules/web/src/main/java/me/aap/fermata/addon/web/yt/XfCamSync.java).
-- **Few permissions.** The APK declares internet, microphone, notifications and media playback, plus a few routine ones (network and Wi-Fi state, wake lock, audio settings). Since v1.0.3-beta.3 it also declares the permission to request installs: **Fix now** uses it only to reinstall xFermaTube itself, it does nothing until you allow it in the phone's settings, and you can turn it off again afterwards. Since v1.0.3-beta.4 it declares the camera, for the sync check only. The location, storage, screen overlay, boot and system-settings permissions that FermataX declares are removed.
+- **Few permissions.** The APK declares internet, microphone, notifications and media playback, plus a few routine ones (network and Wi-Fi state, wake lock, audio settings). Since v1.0.3-beta.3 it also declares the permission to request installs: **Fix now** uses it only to reinstall xFermaTube itself, it does nothing until you allow it in the phone's settings, and you can turn it off again afterwards. Since v1.0.3 it declares the camera, for the sync check only. The location, storage, screen overlay, boot and system-settings permissions that FermataX declares are removed.
 - **YouTube is the normal mobile YouTube site.** Google's own privacy policy applies, the same as in any browser.
 
 ## Install
@@ -125,7 +125,7 @@ Xiaomi / HyperOS: if the phone blocks the second way, turn on **Install via USB*
 
 ### The one-time sync check
 
-New in v1.0.3-beta.4. In beta.3 you had to fix the last bit by ear with **−10 / +10**. Then I had a better idea: let the phone *watch* the car screen. It worked better than I hoped, so now it's a one-time step on first start.
+New in v1.0.3. In beta.3 you had to fix the last bit by ear with **−10 / +10**. Then I had a better idea: let the phone *watch* the car screen. It worked better than I hoped, so now it's a one-time step on first start.
 
 Auto sync measures the delay through the phone's microphone, and two things stay hidden from it: the phone's own recording lag, and the extra time Android Auto needs to get the picture onto the car screen. The check measures exactly that, once:
 
