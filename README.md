@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <b><a href="../../releases/tag/v1.0.3-beta.3">⬇ Download the APK (v1.0.3-beta.3)</a></b> · <a href="#install">Full install guide</a>
+  <b><a href="../../releases/tag/v1.0.3-beta.4">⬇ Download the APK (v1.0.3-beta.4)</a></b> · <a href="#install">Full install guide</a>
 </p>
 
 > [!IMPORTANT]
@@ -19,8 +19,8 @@
 > 3. On the phone: Android Auto settings → tap **Version** 10 times → ⋮ → **Developer settings** → tick **Unknown sources**.
 > 4. Open xFermaTube on the phone again and allow the **microphone**.
 > 5. In the car, open **xFermaTube** (play icon), not *xF Audio* (speaker icon).
-> 6. **Sync is not instant.** The app has to listen first: give each new video up to a minute before sound and picture line up.
-> 7. **Set the sound once by hand.** Every phone hears the car's speakers with a different lag, and the app can't know yours. If the sound is still slightly off after auto sync, tap the **⏱** label on the video and press **−10** or **+10** until lips and sound match. The app remembers it for every later video. [More](#using-it-in-the-car)
+> 6. **Do the one-time sync check (new in v1.0.3-beta.4).** The first time xFermaTube is open on the car screen, the phone offers it. Park, tap **Start**, point the phone's back camera at the car screen and hold still for about a minute. The car flashes and beeps, the phone measures the difference and fixes it. You do it once per connection type (USB / wireless). [More](#the-one-time-sync-check)
+> 7. **Sync is not instant.** After that, auto sync listens to each new video first: give it up to a minute before sound and picture line up.
 >
 > On v1.0.2 (the latest stable release) install through AAenabler instead: see the [install guide](#install).
 
@@ -41,7 +41,9 @@ xFermaTube is a stripped-down fork of [FermataX](https://github.com/chuoinho/fer
 
 - **Delayed video instead of earlier audio.** Audio that is already in the car's buffer can't be sped up, so the app holds the picture back. YouTube keeps playing normally. The frames are copied to a canvas and shown X ms later, so they line up with what you hear from the car's speakers.
 - **Automatic delay measurement with the phone's microphone.** The app records about 10 seconds of what the car's speakers actually play. It compares that with the video's own soundtrack and finds the lag by cross-correlation. In auto mode this repeats on its own: about 4 seconds after a new video starts (short 6-second measurements, the first clear one is applied right away, so the picture is in sync within a minute, often sooner), after a buffering stall, and every 20 seconds (every minute once the delay has settled). Each new video starts with fresh measurements, because the lag differs from video to video. A single measurement is noisy (±20–30 ms), so fine-tuning uses the median of the last five measurements. A big jump, for example after a stall, needs two measurements that agree (one of them clear), or three of any kind. Changes are applied gradually so the picture doesn't jump.
+- **One-time check with the phone camera.** The microphone can't hear everything: the phone adds its own lag to the measurement, and Android Auto delays the picture on its way to the car screen. A one-time check fixes that part: the car screen flashes and beeps, and the phone camera and microphone measure how far apart they really are. The result is kept as a correction on top of every later measurement.
 - **Learns your correction.** If you nudge the delay by hand right after a measurement, it remembers the difference and applies it from then on.
+- **Videos tapped on the phone play in the car.** While xFermaTube is open on the car screen, "Open on car" turns on by itself.
 - **Separate settings for USB and wireless Android Auto.** These connections have different latency, so each keeps its own delay. On the phone screen the delay is 0.
 - **YouTube only.** The app opens straight into YouTube. The car's side rail has just **Home, History, Back, Refresh, Settings**, and Settings is one short page: appearance, language, YouTube options (quality limit, ad skipping, SponsorBlock, auto fullscreen) and the sync badge. You can sign in to YouTube on the phone once, and the car uses the same session.
 - **Much smaller.** The APK went from 185 MB to about 19 MB once the unused add-ons were removed (VLC, ExoPlayer, TV, radio, podcasts, audiobooks, SMB, SFTP).
@@ -56,8 +58,9 @@ I built this to fix one annoying problem for myself, not to make money or collec
 
 - **Fully open source (GPL-3.0).** All the code is in this repo. You can read it and build the APK yourself.
 - **No ads, analytics or tracking added.** There are no analytics or crash-reporting SDKs, no accounts and no xFermata server. Nothing is sent to me.
-- **The microphone stays on the phone.** It is used only for the sync measurement and only while a video is playing. The recording is turned into a loudness curve in memory to find the delay, and the audio is never saved or uploaded. See [`XfMicRecorder.java`](fermatax/modules/web/src/main/java/me/aap/fermata/addon/web/yt/XfMicRecorder.java).
-- **Few permissions.** The APK declares internet, microphone, notifications and media playback, plus a few routine ones (network and Wi-Fi state, wake lock, audio settings). Since v1.0.3-beta.3 it also declares the permission to request installs: **Fix now** uses it only to reinstall xFermaTube itself, it does nothing until you allow it in the phone's settings, and you can turn it off again afterwards. The location, camera, storage, screen overlay, boot and system-settings permissions that FermataX declares are removed.
+- **The microphone stays on the phone.** It is used only for the sync measurement and only while a video (or the sync check) is playing. The recording is turned into a loudness curve in memory to find the delay, and the audio is never saved or uploaded. See [`XfMicRecorder.java`](fermatax/modules/web/src/main/java/me/aap/fermata/addon/web/yt/XfMicRecorder.java).
+- **The camera is used only during the one-time sync check.** It is asked for when you tap **Start**, not at install. Each frame is turned into one brightness number in memory to find the flashes; no picture is saved or uploaded. See [`XfCamSync.java`](fermatax/modules/web/src/main/java/me/aap/fermata/addon/web/yt/XfCamSync.java).
+- **Few permissions.** The APK declares internet, microphone, notifications and media playback, plus a few routine ones (network and Wi-Fi state, wake lock, audio settings). Since v1.0.3-beta.3 it also declares the permission to request installs: **Fix now** uses it only to reinstall xFermaTube itself, it does nothing until you allow it in the phone's settings, and you can turn it off again afterwards. Since v1.0.3-beta.4 it declares the camera, for the sync check only. The location, storage, screen overlay, boot and system-settings permissions that FermataX declares are removed.
 - **YouTube is the normal mobile YouTube site.** Google's own privacy policy applies, the same as in any browser.
 
 ## Install
@@ -67,14 +70,15 @@ Android Auto only shows video apps that look like they came from the Play Store.
 Since **v1.0.3-beta.3** the app fixes this itself. You install the APK the normal way, and the app then asks the phone's own installer to install it once more, marked as coming from Google Play. No helper app, PC or Wi‑Fi is needed. I tested it in my car with a Samsung phone on Android 17: after a plain install the video app was missing, and after **Fix now** it showed up.
 
 1. **Turn on Unknown sources in Android Auto.** On the phone: Android Auto settings → scroll down and tap **Version** 10 times → **⋮** (top right) → **Developer settings** → tick **Unknown sources**.
-2. **Download the APK** from the [v1.0.3-beta.3 release](../../releases/tag/v1.0.3-beta.3) (arm64 phones only) and open it to install. If Google Play Protect asks about the app, let it scan or choose to install anyway.
+2. **Download the APK** from the [v1.0.3-beta.4 release](../../releases/tag/v1.0.3-beta.4) (arm64 phones only) and open it to install. If Google Play Protect asks about the app, let it scan or choose to install anyway.
 3. **Open xFermaTube on the phone.** It says *Android Auto may hide the video app*. Tap **Fix now**, then:
    - **Open the setting** → turn on *Allow from this source* for xFermaTube → go back to the app. This is asked once.
    - **Reinstall now** → **Update** in the installer window.
    - Open xFermaTube again. It shows *Install source fixed*.
 4. **Allow the microphone** when the app asks. The car screen can't show this request. You can also grant it later: Settings → Apps → xFermaTube → Permissions → Microphone.
 5. **Connect to the car and open xFermaTube** from the Android Auto app list. If the phone was already connected, unplug it and connect again: Android Auto reads the app list when it connects.
-6. Optional: open xFermaTube on the phone and sign in to YouTube (avatar → Sign in). The car uses the same session.
+6. **Do the one-time sync check** when the phone offers it: see [below](#the-one-time-sync-check).
+7. Optional: open xFermaTube on the phone and sign in to YouTube (avatar → Sign in). The car uses the same session.
 
 To update, open the new APK over the old one. Your settings are kept. The app may ask for **Fix now** again after an update, because the update changes the install record: do it the same way.
 
@@ -119,8 +123,18 @@ Xiaomi / HyperOS: if the phone blocks the second way, turn on **Install via USB*
 
 ## Using it in the car
 
-> [!IMPORTANT]
-> **Set the sound once by hand (new in v1.0.3-beta.3).** Auto sync measures the delay through the phone's microphone, and every phone adds its own lag to that measurement. I can't know it for your phone. So after the first auto sync, check a video with someone talking. If the sound is slightly early or late, tap **⏱**, then **−10** or **+10** until lips and sound match. You do this once: the app remembers the correction and adds it to every later measurement.
+### The one-time sync check
+
+New in v1.0.3-beta.4. In beta.3 you had to fix the last bit by ear with **−10 / +10**. Then I had a better idea: let the phone *watch* the car screen. It worked better than I hoped, so now it's a one-time step on first start.
+
+Auto sync measures the delay through the phone's microphone, and two things stay hidden from it: the phone's own recording lag, and the extra time Android Auto needs to get the picture onto the car screen. The check measures exactly that, once:
+
+1. The first time xFermaTube is open on the car screen, the phone offers **Sync sound and picture**. The offer appears on the phone, so open xFermaTube there while the car is connected.
+2. Park the car, turn the volume up a bit and tap **Start**. Allow the camera and the microphone.
+3. The car screen flashes white and beeps once a second. Point the phone's back camera at the car screen so it fills the middle of the picture, and keep the phone still: rest it against the steering wheel or the seat.
+4. The phone waits until auto sync has settled, then measures for 10 seconds: when the flash is seen and when the beep is heard. It fixes the difference, checks once more and says **Done**.
+
+It takes about a minute, and you do it once for USB and once for wireless if you use both. From then on auto sync keeps every video in sync by itself: in my car, after the check, the next videos synced within seconds and the lips matched. **Later** asks again on the next connection, **Don't ask again** turns the offer off. You can run it any time from Settings → *Sync sound and picture (camera)*, with the car connected.
 
 **Sync is not instant.** The app can't know the delay in advance: it has to hear the car's speakers through the phone's microphone and compare that with the video's soundtrack. For each new video it can take up to a minute before sound and picture line up. It can take longer when the audio is quiet, the car is noisy, or the music is very rhythmic. Until then the video uses the delay from the previous video. The sound must be audible in the cabin: with the volume at zero there is nothing to measure.
 
@@ -129,7 +143,7 @@ Tap the faint **⏱ X ms** label at the top left of the video to see the control
 - **−10 / +10** fine-tune the delay by hand. Do it right after a measurement: the app remembers your correction, applies it to every later measurement and shows it in the label, for example **⏱ 480 ms (+30)**. The buttons are greyed out while the microphone is measuring.
 - **Auto** turns automatic measurement on or off (green = on).
 
-**Why there is a manual correction.** The measurement itself is not free of delay. The sound travels from the car's speakers to the phone, and the phone's microphone and audio system need some time before the app gets the recording. The app can't see that time, so the measured value can be off by a few tens of milliseconds. The error is about the same every time, which is why one correction is enough: set it once with **−10 / +10** until lips and sound match, and the app adds it to every later measurement. The number in the label is the delay in use, the number in brackets is your part of it. In my car the sound was still slightly late after auto sync, and a small correction fixed it. This is new in v1.0.3-beta.3 and I have only tried it briefly.
+**Why there is a correction.** The measurement itself is not free of delay. The sound travels from the car's speakers to the phone, and the phone's microphone and audio system need some time before the app gets the recording. The app can't see that time, so the measured value can be off by a few tens of milliseconds. The error is about the same every time, which is why one correction is enough. The [one-time sync check](#the-one-time-sync-check) sets it with the camera; if you skipped it, set it with **−10 / +10** until lips and sound match. The app adds it to every later measurement. The number in the label is the delay in use, the number in brackets is the correction.
 
 The panel used to have **−100 / +100** and a **🎤** button for a single measurement. I removed them: auto sync does the measuring, and big manual steps only fought with it. After you seek, the app measures again about 3 seconds later.
 
@@ -161,6 +175,7 @@ Key files:
 |---|---|
 | Video delay, sync measurement, auto mode (injected JS) | `fermatax/modules/web/src/main/assets/xf-video-delay.js` |
 | Microphone recorder (Java `AudioRecord`, no audio focus) | `fermatax/modules/web/.../yt/XfMicRecorder.java` |
+| One-time camera sync check (wizard) | `fermatax/modules/web/.../yt/XfCamSync.java` |
 | Injection and USB / wireless detection | `fermatax/modules/web/.../yt/YoutubeWebView.java` |
 | YouTube-only switches | `fermatax/fermata/src/main/java/me/aap/fermata/xf/` |
 | Car side rail | `fermatax/fermata/.../ui/glass/rail/GlassNavigationRailView.java` |

@@ -86,6 +86,12 @@ public class YoutubeAddon extends WebBrowserAddon
 	private static final String[] XF_MAX_QUALITY_LEVELS = {"hd720", "hd1080", "highres"};
 	// xFermata: ar rodyti ⏱ ženkliuką video kampe (vėlinimas ir auto veikia ir jį paslėpus).
 	private static final Pref<BooleanSupplier> XF_SYNC_BADGE = Pref.b("XF_SYNC_BADGE", true);
+	// xFermaTube: telefono kameros matavimo rezultatas automobilio WebView'ui („ms@laikas“, kad kiekvienas
+	// matavimas būtų naujas pokytis). Automobilio WebView jį pritaiko vieną kartą ir išvalo.
+	private static final Pref<Supplier<String>> XF_CAM_CORR = Pref.s("XF_CAM_CORR", "");
+	private static final Pref<BooleanSupplier> XF_AUTO_OPEN_ON_CAR = Pref.b("XF_AUTO_OPEN_ON_CAR", true);
+	// xFermaTube: kuriems ryšiams (usb, wifi) vienkartinis kameros vedlys jau atliktas; „never“ – nebeklausti.
+	private static final Pref<Supplier<String>> XF_CAL_DONE = Pref.s("XF_CAL_DONE", "");
 	private static final Pref<Supplier<String>> YT_ITEM_HISTORY = Pref.s("YT_ITEM_HISTORY", "");
 	private static final Pref<Supplier<String>> YT_PINNED_ITEMS = Pref.s("YT_PINNED_ITEMS", "");
 	private static final YoutubeRetentionPolicy ITEM_RETENTION =
@@ -149,6 +155,157 @@ public class YoutubeAddon extends WebBrowserAddon
 				.remove("YT_RESUME_VIDEO_ID")
 				.apply();
 		reconcilePinnedItems();
+		if (AUTO) xfInstallAutoOpenOnCar();
+		xfInstallCalibrationOffer();
+	}
+
+	// ---- xFermaTube: pirmo paleidimo vedlys (vienkartinis garso ir vaizdo suderinimas telefono kamera) ----
+	// Kai automobilio ekrane atidaryta programa, o šiam ryšiui (laidas / belaidis) vedlys dar nedarytas,
+	// telefone (kai programa atidaryta) pasiūlomas vedlys; automobilio ekrane – užuomina atidaryti telefoną.
+	private final android.os.Handler xfMain = new android.os.Handler(android.os.Looper.getMainLooper());
+	private long xfCalSnoozeEpoch = -1, xfCalHintEpoch = -1;
+	private boolean xfCalShowing;
+	private final Runnable xfCalOffer = this::xfMaybeOfferCalibration;
+
+	private void xfInstallCalibrationOffer() {
+		FermataApplication.get().registerActivityLifecycleCallbacks(
+				new android.app.Application.ActivityLifecycleCallbacks() {
+					@Override
+					public void onActivityResumed(@NonNull android.app.Activity act) {
+						if (act instanceof me.aap.fermata.ui.activity.MainActivity) {
+							xfMain.removeCallbacks(xfCalOffer);
+							xfMain.postDelayed(xfCalOffer, 1500);
+						}
+					}
+
+					@Override
+					public void onActivityCreated(@NonNull android.app.Activity act, android.os.Bundle b) {
+					}
+
+					@Override
+					public void onActivityStarted(@NonNull android.app.Activity act) {
+					}
+
+					@Override
+					public void onActivityPaused(@NonNull android.app.Activity act) {
+					}
+
+					@Override
+					public void onActivityStopped(@NonNull android.app.Activity act) {
+					}
+
+					@Override
+					public void onActivitySaveInstanceState(@NonNull android.app.Activity act,
+							@NonNull android.os.Bundle b) {
+					}
+
+					@Override
+					public void onActivityDestroyed(@NonNull android.app.Activity act) {
+					}
+				});
+	}
+
+	/** Automobilio WebView įkėlė puslapį (kviečiama pagrindinėje gijoje). */
+	void xfCarWebReady() {
+		xfMain.removeCallbacks(xfCalOffer);
+		xfMain.postDelayed(xfCalOffer, 5000);
+	}
+
+	private static long xfConnectionEpoch() {
+		try {
+			return me.aap.fermata.auto.AutomotiveNavigationController.get().captureSourceToken(0).connectionEpoch();
+		} catch (RuntimeException ex) {
+			return -2;
+		}
+	}
+
+	private void xfMaybeOfferCalibration() {
+		if (xfCalShowing) return;
+		YoutubeWebView car = YoutubeWebView.xfCarWeb();
+		if (car == null) return;
+		String conn = car.xfConnection();
+		if ("phone".equals(conn) || xfCalDone(conn)) return;
+		long epoch = xfConnectionEpoch();
+		if (epoch == xfCalSnoozeEpoch) return;
+		me.aap.fermata.ui.activity.MainActivity m = me.aap.fermata.ui.activity.MainActivity.getActiveInstance();
+		MainActivityDelegate a = null;
+		if ((m != null) && !m.isFinishing()) {
+			try {
+				a = MainActivityDelegate.get(m);
+			} catch (RuntimeException ignored) {
+			}
+		}
+		if ((a == null) || a.isCarActivity()) {
+			if (epoch != xfCalHintEpoch) {
+				xfCalHintEpoch = epoch;
+				car.xfHint("One-time sound sync: park, then open xFermaTube on your phone (about a minute).");
+			}
+			return;
+		}
+		Log.i("xF: offering the one-time sync wizard for " + conn);
+		XfCamSync.show(a, this, true);
+	}
+
+	void xfCalOpened() {
+		xfCalShowing = true;
+	}
+
+	/** Vedlys uždarytas: later – nebeklausti per šį prisijungimą. */
+	void xfCalClosed(boolean later) {
+		xfCalShowing = false;
+		if (later) xfCalSnoozeEpoch = xfConnectionEpoch();
+	}
+
+	boolean xfCalDone(String conn) {
+		String v = getPreferenceStore().getStringPref(XF_CAL_DONE);
+		if ((v == null) || v.isEmpty()) return false;
+		for (String s : v.split(",")) {
+			if (s.equals(conn) || s.equals("never")) return true;
+		}
+		return false;
+	}
+
+	void xfCalMark(String what) {
+		if (xfCalDone(what) && !"never".equals(what)) return;
+		String v = getPreferenceStore().getStringPref(XF_CAL_DONE);
+		v = ((v == null) || v.isEmpty()) ? what : v + "," + what;
+		try (PreferenceStore.Edit e = getPreferenceStore().editPreferenceStore()) {
+			e.setStringPref(XF_CAL_DONE, v);
+		}
+	}
+
+	// ---- xFermaTube: „Open on car“ įjungiamas pats ----
+	// Upstream jungiklį kiekvienam prisijungimui išjungia, ir jį reikia rasti bei įjungti ranka, kitaip telefone
+	// paspaustas video groja telefone. Čia jis įjungiamas pats, kai automobilyje atidaryta programa; jei per tą
+	// prisijungimą vartotojas jį išjungė ranka, iki kito prisijungimo nebeįjungiamas.
+	private boolean xfOocAvailable, xfOocEnabled;
+	private long xfOocEpoch = -1, xfOocOffEpoch = -1;
+
+	private void xfInstallAutoOpenOnCar() {
+		me.aap.fermata.auto.AutomotiveNavigationController nav =
+				me.aap.fermata.auto.AutomotiveNavigationController.get();
+		me.aap.fermata.auto.OpenOnCarMode mode = nav.getOpenOnCarMode();
+		android.os.Handler h = new android.os.Handler(android.os.Looper.getMainLooper());
+		mode.addListener((available, enabled, revision) -> h.post(() -> xfOnOpenOnCarChanged(nav, mode)));
+	}
+
+	private void xfOnOpenOnCarChanged(me.aap.fermata.auto.AutomotiveNavigationController nav,
+			me.aap.fermata.auto.OpenOnCarMode mode) {
+		boolean available = mode.isAvailable(), enabled = mode.isEnabled();
+		long epoch = nav.captureSourceToken(0).connectionEpoch();
+		// Tas pats prisijungimas, programa automobilyje matoma, o jungiklis ką tik išjungtas – tai vartotojas.
+		if ((epoch == xfOocEpoch) && xfOocAvailable && available && xfOocEnabled && !enabled) {
+			xfOocOffEpoch = epoch;
+			Log.i("xF: open on car turned off by user for this connection");
+		}
+		xfOocAvailable = available;
+		xfOocEnabled = enabled;
+		xfOocEpoch = epoch;
+		if (available && !enabled && (epoch != xfOocOffEpoch) &&
+				getPreferenceStore().getBooleanPref(XF_AUTO_OPEN_ON_CAR)) {
+			Log.i("xF: enabling open on car automatically");
+			mode.setEnabled(true);
+		}
 	}
 
 	@IdRes
@@ -222,6 +379,29 @@ public class YoutubeAddon extends WebBrowserAddon
 			o.subtitle = R.string.xf_sync_badge_sub;
 			o.visibility = visibility;
 		});
+		set.addBooleanPref(o -> {
+			o.store = getPreferenceStore();
+			o.pref = XF_AUTO_OPEN_ON_CAR;
+			o.title = R.string.xf_auto_open_on_car;
+			o.subtitle = R.string.xf_auto_open_on_car_sub;
+			o.visibility = visibility;
+		});
+		// xFermaTube: kameros testas tik telefone (kamerą reikia nukreipti į automobilio ekraną).
+		MainActivityDelegate xfa;
+		try {
+			xfa = MainActivityDelegate.get(ctx);
+		} catch (RuntimeException ex) {
+			xfa = null;
+		}
+		if ((xfa != null) && !xfa.isCarActivity()) {
+			MainActivityDelegate a = xfa;
+			set.addButton(o -> {
+				o.title = R.string.xf_cam_sync;
+				o.subtitle = R.string.xf_cam_sync_sub;
+				o.visibility = visibility;
+				o.onClick = () -> XfCamSync.show(a, this, false);
+			});
+		}
 		YoutubePlayerPreferences.contributeAutoFullscreenSetting(getPreferenceStore(), set, visibility);
 		if (AUTO) {
 			set.addBooleanPref(o -> {
@@ -398,6 +578,31 @@ public class YoutubeAddon extends WebBrowserAddon
 
 	boolean xfSyncBadge() {
 		return getPreferenceStore().getBooleanPref(XF_SYNC_BADGE);
+	}
+
+	boolean xfCamCorrChanged(List<Pref<?>> prefs) {
+		return prefs.contains(XF_CAM_CORR);
+	}
+
+	/** Kameros korekcija ms (0 – nėra); paimta reikšmė išvaloma, kad nebūtų pritaikyta dar kartą. */
+	synchronized int xfTakeCamCorr() {
+		String v = getPreferenceStore().getStringPref(XF_CAM_CORR);
+		if ((v == null) || v.isEmpty()) return 0;
+		try (PreferenceStore.Edit e = getPreferenceStore().editPreferenceStore()) {
+			e.setStringPref(XF_CAM_CORR, "");
+		}
+		try {
+			int at = v.indexOf('@');
+			return Integer.parseInt((at < 0) ? v : v.substring(0, at));
+		} catch (NumberFormatException ex) {
+			return 0;
+		}
+	}
+
+	void xfPutCamCorr(int ms) {
+		try (PreferenceStore.Edit e = getPreferenceStore().editPreferenceStore()) {
+			e.setStringPref(XF_CAM_CORR, ms + "@" + System.currentTimeMillis());
+		}
 	}
 
 	boolean xfSyncBadgeChanged(List<Pref<?>> prefs) {

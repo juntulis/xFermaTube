@@ -15,4 +15,5 @@
     <item name="xf_audio_track" type="id" />
     <item name="xf_loop" type="id" />
     <item name="xf_stable_volume" type="id" />
+    <item name="xf_sync_test" type="id" />
 </resources>

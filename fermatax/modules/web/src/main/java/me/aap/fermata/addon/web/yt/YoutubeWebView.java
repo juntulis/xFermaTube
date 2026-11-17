@@ -167,6 +167,7 @@ public class YoutubeWebView extends FermataWebView {
 			evaluateJavascript("window.__xfBadge=" + getAddon().xfSyncBadge() +
 					";window.__xfDelay&&window.__xfDelay.attach();", null);
 		}
+		if (getAddon().xfCamCorrChanged(prefs)) xfApplyCamCorr();
 		if (getAddon().autoFullscreenChanged(prefs) && (mediaEngine != null))
 			mediaEngine.onAutomaticEntryPreferenceChanged();
 
@@ -983,8 +984,78 @@ public class YoutubeWebView extends FermataWebView {
 		evaluateJavascript("if (window.__fermataSponsorBlock && window.__fermataSponsorBlock.stop) { window.__fermataSponsorBlock.stop(); }", null);
 	}
 
+	// xFermaTube: atsijungus nuo Android Auto automobilio WebView likdavo gyvas (paslėptas, su JS laikmačiais ir
+	// atmintimi), o po kiekvieno persijungimo atsirasdavo naujas. Naikinama tik kai automobilio veikla jau
+	// sunaikinta ir WebView po 2 s vis dar neprijungtas (viso ekrano perkėlimai atjungia tik trumpam).
+	private boolean xfDestroyed;
+	private me.aap.fermata.ui.activity.FermataActivity xfCarHost;   // automobilio veikla (telefone null)
+
+	@Override
+	protected void onAttachedToWindow() {
+		super.onAttachedToWindow();
+		try {
+			MainActivityDelegate a = MainActivityDelegate.get(getContext());
+			xfCarHost = a.isCarActivity() ? a.getAppActivity() : null;
+		} catch (RuntimeException ignored) {
+		}
+		if (xfCarHost != null) xfCarRef = new java.lang.ref.WeakReference<>(this);
+	}
+
+	// ---- xFermaTube: pirmo paleidimo vedlys (telefonas valdo automobilio WebView, tas pats procesas) ----
+	private static java.lang.ref.WeakReference<YoutubeWebView> xfCarRef;
+
+	/** Dabar automobilio ekrane rodomas WebView arba null. */
+	@androidx.annotation.Nullable
+	static YoutubeWebView xfCarWeb() {
+		java.lang.ref.WeakReference<YoutubeWebView> r = xfCarRef;
+		YoutubeWebView w = (r != null) ? r.get() : null;
+		if ((w == null) || w.xfDestroyed || !w.isAttachedToWindow()) return null;
+		me.aap.fermata.ui.activity.FermataActivity host = w.xfCarHost;
+		return ((host == null) || host.isDestroyed()) ? null : w;
+	}
+
+	/**
+	 * Vedliui: testo ir 🎤 būsena vienu skaičiumi. -1 – skriptas dar neįkeltas; kitaip
+	 * balsų (paskutinių 🎤 matavimų) skaičius + 100, jei delsa dar keičiasi, + 1000, jei testas rodomas.
+	 */
+	void xfWizardState(android.webkit.ValueCallback<Integer> cb) {
+		evaluateJavascript("(function(){var d=window.__xfDelay;if(!d||!d.autoInfo)return -1;var i=d.autoInfo();" +
+				"return Math.min(99,i.votes.length)+(i.ramping?100:0)+(d.testOn&&d.testOn()?1000:0);})()", v -> {
+			int n;
+			try {
+				n = Integer.parseInt(v);
+			} catch (NumberFormatException | NullPointerException ex) {
+				n = -1;
+			}
+			cb.onReceiveValue(n);
+		});
+	}
+
+	/** Užuomina automobilio ekrane (veikia ir be video). */
+	void xfHint(String text) {
+		evaluateJavascript("window.__xfDelay&&window.__xfDelay.hint&&window.__xfDelay.hint(" +
+				org.json.JSONObject.quote(text) + ",20000)", null);
+	}
+
+	@Override
+	protected void onDetachedFromWindow() {
+		super.onDetachedFromWindow();
+		if (xfCarHost != null) {
+			new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(this::xfDestroyIfCarGone, 2000);
+		}
+	}
+
+	private void xfDestroyIfCarGone() {
+		me.aap.fermata.ui.activity.FermataActivity host = xfCarHost;
+		if (xfDestroyed || isAttachedToWindow() || (host == null) || !host.isDestroyed()) return;
+		Log.i("xF: destroying detached car WebView of a destroyed car activity");
+		destroy();
+	}
+
 	@Override
 	public void destroy() {
+		if (xfDestroyed) return;
+		xfDestroyed = true;
 		YoutubeWebAudioBridge.close(this);
 		setFullscreenTapEnabled(false);
 		if (mediaEngine != null) {
@@ -1011,12 +1082,17 @@ public class YoutubeWebView extends FermataWebView {
 			}
 		}
 		// Ryšio tipas: delsa ir korekcija saugomos atskirai USB / belaidžiam AA / telefonui.
-		evaluateJavascript("window.__xfConn='" + xfConnection() + "';window.__xfBadge=" +
+		String conn = xfConnection();
+		evaluateJavascript("window.__xfConn='" + conn + "';window.__xfBadge=" +
 				getAddon().xfSyncBadge() + ";" + videoDelayJs, null);
+		if (!"phone".equals(conn)) {
+			xfCarRef = new java.lang.ref.WeakReference<>(this);
+			getAddon().xfCarWebReady();
+		}
 	}
 
 	/** „phone“ – ne automobilyje; „usb“ – AA per laidą; „wifi“ – belaidis AA. */
-	private String xfConnection() {
+	String xfConnection() {
 		try {
 			if (!MainActivityDelegate.get(getContext()).isCarActivity()) return "phone";
 			android.content.Context ctx = getContext().getApplicationContext();
@@ -1274,6 +1350,29 @@ public class YoutubeWebView extends FermataWebView {
 				xfPlayerState = 0;
 			}
 		});
+		evaluateJavascript("!!(window.__xfDelay&&window.__xfDelay.testOn&&window.__xfDelay.testOn())",
+				value -> xfTestOn = "true".equals(value));
+	}
+
+	// ---- xFermaTube: sinchronizacijos testas (blyksnis + pyptelėjimas) ir kameros korekcija ----
+	private boolean xfTestOn;
+
+	boolean xfSyncTestOn() {
+		return xfTestOn;
+	}
+
+	void xfSetSyncTest(boolean on) {
+		xfTestOn = on;
+		evaluateJavascript("window.__xfDelay&&window.__xfDelay.syncTest&&window.__xfDelay.syncTest(" +
+				on + ")", null);
+	}
+
+	/** Telefono kameros matavimas: taikoma tik automobilio WebView (telefone vėlinimas nenaudojamas). */
+	private void xfApplyCamCorr() {
+		if ("phone".equals(xfConnection())) return;
+		int ms = getAddon().xfTakeCamCorr();
+		if (ms == 0) return;
+		evaluateJavascript("window.__xfDelay&&window.__xfDelay.camCorr&&window.__xfDelay.camCorr(" + ms + ")", null);
 	}
 
 	boolean xfLoop() {

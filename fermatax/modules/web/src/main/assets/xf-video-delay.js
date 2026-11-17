@@ -33,6 +33,7 @@
   var st = { cap: 0, drawn: 0, skip: 0, bmpMs: 0 }, stats = { capFps: 0, drawFps: 0, skip: 0, bmpMs: 0 }, statsAt = 0;
 
   function activeVideo() {
+    if (testVid) return testVid;   // sinchronizacijos testo metu vėlinamas testo video
     return (window.__fermataActiveVideo && window.__fermataActiveVideo()) ||
       document.querySelector('video.html5-main-video') || document.querySelector('video');
   }
@@ -269,6 +270,8 @@
       'pointer-events:none;font:500 4.6vh/1.4 "YouTube Noto",Roboto,Arial,sans-serif;color:#fff}' +
       'html.fermata-yt-immersive #xf-cc.xf-cc-on{display:block}' +
       '#xf-cc,#xf-cc *{visibility:visible!important}' +
+      '#xf-test-video{position:fixed!important;left:0;top:0;width:100vw;height:100vh;background:#000;' +
+      'object-fit:contain;z-index:2147483646!important;visibility:visible!important;pointer-events:none}' +
       '#xf-cc span{background:rgba(8,8,8,.75);padding:.1em .4em;' +
       '-webkit-box-decoration-break:clone;box-decoration-break:clone}';
     document.documentElement.appendChild(s);
@@ -281,8 +284,10 @@
     b.textContent = text;
     b.addEventListener('click', function (e) {
       e.stopPropagation(); e.preventDefault();
-      if (measuring) return;
-      manualSet(delayMs + step); openUi();
+      // Ranka paleistas 🎤 – laukiam jo; tylų auto matavimą nutraukiam, kad ±10 veiktų visada.
+      if (measuring) { if (!measQuiet) return; if (measCancel) measCancel(); }
+      if (testVid) shiftCorr(step); else manualSet(delayMs + step);
+      openUi();
     }, true);
     return b;
   }
@@ -297,6 +302,61 @@
     if (med == null && lastOkMeas && Date.now() - lastOkMeas.at < LEARN_MS) med = lastOkMeas.ms;
     if (med != null) setOffset(med - delayMs);
     stableN = 0;
+  }
+
+  // Korekcija tiesiogiai (testo video ar kameros matavimas): delsa + ms, ir tiek pat įsimenama korekcijoje,
+  // kad auto režimas toliau taikytų tą patį poslinkį („🎤 − korekcija“). Nepriklauso nuo to, ar buvo matavimas.
+  // Korekcija skaičiuojama nuo 🎤 medianos (ne nuo dabartinės korekcijos): jei auto dar nebuvo nusistovėjęs,
+  // „micOffset − ms“ būtų klaidinga ir auto vėliau nuvestų delsą į šoną. Medianos nėra – tik tada senasis būdas.
+  function shiftCorr(ms) {
+    ms = Math.round(ms) || 0;
+    if (!ms) return;
+    stopRamp();
+    var prevOff = micOffset;
+    api.set(delayMs + ms);
+    var med = recentMedian(LEARN_MS);
+    if (med == null && lastOkMeas && Date.now() - lastOkMeas.at < LEARN_MS) med = lastOkMeas.ms;
+    setOffset(med != null ? med - delayMs : prevOff - ms);
+    stableN = 0;
+  }
+
+  // ---- Sinchronizacijos testas (⋮ → Sync test arba telefono vedlys) ----
+  // Programos testo video: kas sekundę baltas blyksnis ir pyptelėjimas tuo pačiu metu (faile sutampa ~2 ms).
+  // Groja vietoj YouTube video tuo pačiu keliu (<video> → vėlinimas → Android Auto), todėl automobilyje
+  // matosi tikras likęs poslinkis: akimis (±10) arba telefono kamera (vienkartinis vedlys telefone).
+  var TEST_URL = 'https://xf.invalid/sync-test.webm';
+  var testVid = null, ytResume = false;
+  function syncTest(on) {
+    if (!!on === !!testVid) return !!testVid;
+    if (on) {
+      var yv = activeVideo();
+      ytResume = !!yv && !yv.paused;
+      if (yv) {
+        try { window.__fermataPauseOk = true; yv.pause(); } catch (e) {} finally { window.__fermataPauseOk = false; }
+      }
+      ensureStyle();
+      var t = document.createElement('video');
+      t.id = 'xf-test-video';
+      t.crossOrigin = 'anonymous';   // programa atsako su CORS: tada veikia ir 🎤 matavimas (captureStream)
+      t.loop = true; t.playsInline = true; t.autoplay = true;
+      t.src = TEST_URL;
+      (document.fullscreenElement || document.body).appendChild(t);
+      testVid = t;
+      var p = t.play();
+      if (p && p.catch) p.catch(function (e) { logAuto('test play: ' + (e && e.name)); });
+      logAuto('sync test on');
+    } else {
+      var old = testVid;
+      testVid = null;
+      try { old.pause(); old.removeAttribute('src'); old.load(); } catch (e) {}
+      old.remove();
+      logAuto('sync test off');
+    }
+    api.attach();
+    if (!on && ytResume && video && video.paused) { var r = video.play(); if (r && r.catch) r.catch(function () {}); }
+    updateLabel();
+    openUi(6000);
+    return !!testVid;
   }
 
   function openUi(ms) {
@@ -324,6 +384,7 @@
   // Ieškoma 0–1000 ms: testiniai video pypsi kas 1 s, todėl didesnis langas duotų dviprasmišką rezultatą.
   var MEAS_SEC = 10, BIN_MS = 10, MAX_LAG_MS = 1000;
   var measuring = false, measQuiet = false, measOut = null, lastMeas = null, lastOkMeas = null;   // lastOkMeas {ms, at}
+  var measCancel = null;   // nutraukia vykstantį matavimą (ranka paspaudus ±10 auto matavimo metu)
 
   // quiet = auto režimo tekstas: matosi tik atidarius valdiklį.
   function showMeas(text, quiet) {
@@ -446,7 +507,7 @@
     var refE = [], fakeE = [], accR = 0, accF = 0, n = 0, samples = 0, r0perf = Infinity;
 
     function done(text, res, err) {
-      measuring = false; micCb = null; clearTimeout(timer);
+      measuring = false; micCb = null; measCancel = null; clearTimeout(timer);
       // Matuojant pasikeitė video: rezultatas sumaišytas iš dviejų video, netinka.
       if (res && myVid !== vidGen) { res = null; err = 'video changed'; text = '🎤 video changed'; }
       try { if (proc) proc.disconnect(); } catch (e) {}
@@ -478,6 +539,13 @@
     }
 
     var startEpoch = Date.now(), myGen = ++measGen;
+    measCancel = function () {
+      if (measuring && measGen === myGen) done('🎤 cancelled', null, 'cancelled');
+    };
+    // Saugiklis: jei AudioContext niekada nepasileidžia (ac.resume nekviečia then), matavimas neturi kabėti amžinai.
+    setTimeout(function () {
+      if (measuring && measGen === myGen) done('🎤 timeout', null, 'timeout');
+    }, secs * 1000 + 20000);
     micCb = function (res) {
       res = res || { err: 'empty reply' };
       if (!res.err && res.t0 < startEpoch - 1000) return;   // senesnio matavimo pavėlavęs atsakymas
@@ -549,6 +617,13 @@
   var AUTO_SEC = 6, AUTO_PARTS = 2;            // auto matavimo trukmė ir į kiek dalių jis dalijamas patikrai
   var AUTO_GAP_MS = 500;                       // tarpas tarp matavimų, kol delsa gaudoma
   var AUTO_EVERY_MS = 20000, AUTO_STABLE_MS = 30000, STABLE_N = 3;   // po STABLE_N „ok“ iš eilės matuojama rečiau
+  // Baterijai: kuo ilgiau delsa patvirtinama, tuo rečiau matuojama (30 s → 1 → 2 → 4 → 5 min).
+  // Po prasukimo, užstrigimo, naujo video ar pakeitimo stableN = 0, ir vėl matuojama dažnai.
+  var AUTO_MAX_MS = 5 * 60000;
+  function stableInterval() {
+    if (stableN < STABLE_N) return AUTO_EVERY_MS;
+    return Math.min(AUTO_MAX_MS, AUTO_STABLE_MS * Math.pow(2, Math.min(5, stableN - STABLE_N)));
+  }
   var AUTO_RETRY_MS = 10000, CATCH_MISS = 4;   // po CATCH_MISS netinkamų matavimų iš eilės (tyla) – retai
   var VOTE_CONF = 0.4;                         // stipri smailė tinka ir be „ratio“, jei įrašo pusės sutampa
   var FRESH_N = 3;                             // pokyčio kandidatai – tik iš tiek paskutinių bandymų (+ dabartinis)
@@ -658,9 +733,10 @@
     var edge = !!res && (res.ms <= 0 || res.ms >= MAX_LAG_MS);
     if (!res || edge || !(res.ok || (res.conf >= VOTE_CONF && split))) {
       logAuto('unreliable: ' + (err || (res ? res.ms + ' ms ' + res.conf + '/' + res.ratio + (edge ? ', edge' : (res.parts && !split ? ', halves differ' : '')) : 'no result')));
-      stableN = 0;
+      // Patvirtinta delsa nuo vieno nepatikimo matavimo (tyli vieta) nesikeičia, tad ir retinimas nenumušamas.
+      if (!locked) stableN = 0;
       // Gaudant kartojama iškart, bet ne be galo (tyla, nutildytas garsas): po CATCH_MISS – retai.
-      autoSchedule(locked ? AUTO_EVERY_MS : (++missN <= CATCH_MISS ? AUTO_GAP_MS : AUTO_RETRY_MS));
+      autoSchedule(locked ? stableInterval() : (++missN <= CATCH_MISS ? AUTO_GAP_MS : AUTO_RETRY_MS));
       return;
     }
     missN = 0;
@@ -688,7 +764,7 @@
       } else {
         stableN++;
         logAuto(tag + ' → ok (' + delayMs + ', median ' + target + ')');
-        autoSchedule(stableN >= STABLE_N ? AUTO_STABLE_MS : AUTO_EVERY_MS);
+        autoSchedule(stableInterval());
       }
       updateDiag();
       return;
@@ -792,9 +868,10 @@
     // „A“ = auto režimas įjungtas, 🎤 = šiuo metu matuojama.
     var corr = -micOffset;
     if (label) label.textContent = '⏱ ' + delayMs + ' ms' + (corr ? ' (' + (corr > 0 ? '+' : '−') + Math.abs(corr) + ')' : '') +
-      (autoOn && !autoBlocked ? ' A' : '') + (measuring ? ' 🎤' : '');
+      (autoOn && !autoBlocked ? ' A' : '') + (measuring ? ' 🎤' : '') + (testVid ? ' · TEST' : '');
     if (autoBtn) autoBtn.classList.toggle('xf-auto-on', autoOn);
-    if (ui) ui.classList.toggle('xf-busy', !!measuring);
+    // ±10 pilki tik ranka paleisto 🎤 metu; tylus auto matavimas jų neblokuoja (paspaudus nutraukiamas).
+    if (ui) ui.classList.toggle('xf-busy', !!measuring && !measQuiet);
   }
 
   // YouTube garso formatas pagal itag (afmt): delsa Android Auto gali skirtis opus (48 kHz) ir aac (44,1 kHz).
@@ -838,7 +915,11 @@
       video.insertAdjacentElement('afterend', canvas);
     }
     if (!ui) buildUi();
-    if (ui.parentElement !== parent) parent.appendChild(ui);
+    // Viso ekrano režime ⏱ dedamas į fullscreen elementą: šalia video (html5-video-container, z=10) jį
+    // uždengia YouTube valdiklių sluoksnis (player-controls-background), ir bakstelėjimą gauna YouTube.
+    var fs = document.fullscreenElement;
+    var uiParent = (fs && fs !== video && fs.contains(video)) ? fs : parent;
+    if (ui.parentElement !== uiParent) { uiParent.appendChild(ui); geomKey = ''; }
     ccAttach(parent);
     geomAt = 0;                         // kitame draw() perskaičiuoti vietą
     updateGeom(performance.now());
@@ -874,11 +955,20 @@
     redraw = true;
     // Kadrus fiksuojam ne didesnius, nei jie bus nupiešti.
     capW = Math.max(160, Math.min(MAX_W, g.cw));
-    if (ui) {
-      ui.style.setProperty('position', g.pos, 'important');
-      ui.style.left = (g.left + 8) + 'px';
-      ui.style.top = (g.top + 8) + 'px';
+    placeUi(g);
+  }
+
+  function placeUi(g) {
+    if (!ui) return;
+    var pos = g.pos, left = g.left, top = g.top, p = ui.parentElement;
+    // ⏱ kitame tėve (fullscreen elemente): vieta skaičiuojama nuo jo, ne nuo video offsetParent.
+    if (pos !== 'fixed' && p && video && p !== video.parentElement) {
+      var vb = video.getBoundingClientRect(), pb = p.getBoundingClientRect();
+      left = vb.left - pb.left; top = vb.top - pb.top;
     }
+    ui.style.setProperty('position', pos, 'important');
+    ui.style.left = (left + 8) + 'px';
+    ui.style.top = (top + 8) + 'px';
   }
 
   function setOpacity(v) {
@@ -1018,6 +1108,36 @@
     // Testui: pati koreliacija (garsumo kreivės kas 10 ms ir jų pradžios laikai).
     _correlate: function (refE, r0, micE, m0, parts, hint) { return correlate(refE, r0, micE, m0, parts, hint); },
     setOffset: function (v) { setOffset(v); updateDiag(); return micOffset; },
+    // Sinchronizacijos testo video (⋮ meniu): syncTest(true|false), grąžina, ar testas rodomas.
+    syncTest: function (on) { return syncTest(on); },
+    testOn: function () { return !!testVid; },
+    // Telefono kameros matavimo rezultatas: garsas vėluoja ms (neigiamas – skuba) → vaizdas vėlinamas tiek pat.
+    camCorr: function (ms) {
+      ms = Math.max(-500, Math.min(500, Math.round(ms) || 0));
+      shiftCorr(ms);
+      logAuto('camera ' + ms);
+      showMeas('📷 ' + (ms > 0 ? '+' : '') + ms + ' ms', false);
+      openUi(8000);
+      return delayMs;
+    },
+    // Pirmo paleidimo vedlio užuomina automobilio ekrane (veikia ir be video): hint(tekstas, ms).
+    hint: function (text, ms) {
+      var h = document.getElementById('xf-hint');
+      if (!h) {
+        h = document.createElement('div');
+        h.id = 'xf-hint';
+        h.style.cssText = 'position:fixed;left:50%;top:12px;transform:translateX(-50%);z-index:2147483647;' +
+          'background:rgba(0,0,0,.82);color:#fff;font:600 18px/1.35 sans-serif;padding:10px 18px;' +
+          'border-radius:12px;max-width:80vw;text-align:center;pointer-events:none;visibility:visible';
+      }
+      // Viso ekrano režime matosi tik fullscreen elementas; kitaip – body (⏱ tėvas gali būti paslėptas grotuvas).
+      var hp = document.fullscreenElement || document.body;
+      if (h.parentElement !== hp) hp.appendChild(h);
+      h.textContent = text || '';
+      clearTimeout(h._t);
+      h._t = setTimeout(function () { h.remove(); }, ms || 15000);
+      return true;
+    },
     // Programos ⋮ meniu: subtitrai, garso takelis, kartojimas, „Stable volume“.
     ccList: function (lang, done) { ccList(lang, done); },
     ccSet: function (i) { return ccSet(i); },
@@ -1071,6 +1191,19 @@
     }
   };
   window.__xfDelay = api;
+
+  // Telefone YouTube sąraše paleidžia nutildytas peržiūras (inline preview): jos bereikalingai dekoduoja video
+  // ir eikvoja bateriją, ypač kai tikras video groja automobilyje. Stabdomos tik nutildytos ir tik ne
+  // žiūrėjimo puslapyje: įprastas žiūrėjimas ir mini grotuvas telefone nesikeičia.
+  if (CONN === 'phone') {
+    document.addEventListener('play', function (e) {
+      var v = e.target;
+      if (!v || v.tagName !== 'VIDEO' || v === testVid || !v.muted) return;
+      var p = location.pathname || '';
+      if (p.indexOf('/watch') === 0 || p.indexOf('/shorts') === 0) return;
+      try { window.__fermataPauseOk = true; v.pause(); } catch (x) {} finally { window.__fermataPauseOk = false; }
+    }, true);
+  }
 
   // YouTube yra SPA: video elementas ir fullscreen konteineris keičiasi, todėl periodiškai tikrinam.
   api.attach();

@@ -1102,6 +1102,9 @@ class YoutubeMediaEngine implements MediaEngine, OverlayMenu.SelectionHandler {
 			b.addItem(R.id.xf_stable_volume, null, r.getString(R.string.xf_stable_volume))
 					.setChecked(web.xfStableVolume(), false).setHandler(this);
 		}
+		// xFermaTube: testo video (blyksnis + pyptelėjimas) garso patikslinimui akimis arba telefono kamera.
+		b.addItem(R.id.xf_sync_test, null, r.getString(R.string.xf_sync_test))
+				.setChecked(web.xfSyncTestOn(), false).setHandler(this);
 		web.xfRefreshPlayerState();
 		b.addItem(R.id.yt_auto_fullscreen, null, r.getString(R.string.yt_auto_fullscreen))
 				.setChecked(web.getAddon().getAutoFullscreen(), false).setHandler(this);
@@ -1132,6 +1135,9 @@ class YoutubeMediaEngine implements MediaEngine, OverlayMenu.SelectionHandler {
 			return true;
 		} else if (itemId == R.id.xf_stable_volume) {
 			web.xfSetStableVolume(!web.xfStableVolume());
+			return true;
+		} else if (itemId == R.id.xf_sync_test) {
+			web.xfSetSyncTest(!web.xfSyncTestOn());
 			return true;
 		} else if (XfPlayerMenu.select(web, item)) {
 			return true;

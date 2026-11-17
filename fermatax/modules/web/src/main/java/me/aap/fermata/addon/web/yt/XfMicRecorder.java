@@ -27,7 +27,7 @@ import me.aap.utils.log.Log;
  */
 final class XfMicRecorder {
 	private static final int BIN_MS = 10;
-	private static volatile boolean busy;
+	static volatile boolean busy;   // ir kameros testui (XfCamSync): mikrofonas vienas
 
 	private XfMicRecorder() {
 	}

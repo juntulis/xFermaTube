@@ -32,6 +32,11 @@
     <string name="xf_audio_track" translatable="false">Audio track</string>
     <string name="xf_loop" translatable="false">Loop video</string>
     <string name="xf_stable_volume" translatable="false">Stable volume</string>
+    <string name="xf_auto_open_on_car" translatable="false">Videos tapped on the phone play in the car</string>
+    <string name="xf_auto_open_on_car_sub" translatable="false">While xFermaTube is open on the car screen, "Open on car" turns on by itself. Turning it off on the phone keeps it off until the next connection.</string>
+    <string name="xf_sync_test" translatable="false">Sync test (flash + beep)</string>
+    <string name="xf_cam_sync" translatable="false">Sync sound and picture (camera)</string>
+    <string name="xf_cam_sync_sub" translatable="false">The one-time check from the first start, about a minute: the car screen flashes and beeps, the phone camera measures the difference and fixes it. Run it with the car connected and parked.</string>
     <string name="yt_auto_fullscreen">Automatic fullscreen</string>
     <string name="try_to_skip_ad">Try to skip advertising</string>
     <string name="sponsorblock" translatable="false">SponsorBlock</string>

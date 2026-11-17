@@ -70,6 +70,69 @@ public class YoutubeWebClient extends FermataWebClient {
 		return false;
 	}
 
+	// xFermaTube: sinchronizacijos testo video (assets/xf-sync-test.webm) puslapiui adresu
+	// https://xf.invalid/sync-test.webm. Atsakoma su CORS, kad puslapis galėtų jį ir „klausyti“ (🎤 matavimas),
+	// ir su Range, nes medijos grotuvas skaito dalimis.
+	static final String XF_TEST_URL = "https://xf.invalid/sync-test.webm";
+	private static volatile byte[] xfTestVideo;
+
+	@Override
+	public android.webkit.WebResourceResponse shouldInterceptRequest(WebView view,
+			WebResourceRequest request) {
+		if (XF_TEST_URL.equals(request.getUrl().toString())) {
+			try {
+				return xfTestResponse(view.getContext(), request);
+			} catch (Exception ex) {
+				Log.e(ex, "xF sync test video");
+				return null;
+			}
+		}
+		return super.shouldInterceptRequest(view, request);
+	}
+
+	private static android.webkit.WebResourceResponse xfTestResponse(android.content.Context ctx,
+			WebResourceRequest request) throws java.io.IOException {
+		byte[] data = xfTestVideo;
+		if (data == null) {
+			try (java.io.InputStream in = ctx.getAssets().open("xf-sync-test.webm")) {
+				java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream(600_000);
+				byte[] buf = new byte[16384];
+				for (int n; (n = in.read(buf)) > 0; ) out.write(buf, 0, n);
+				xfTestVideo = data = out.toByteArray();
+			}
+		}
+		java.util.Map<String, String> h = new java.util.HashMap<>();
+		h.put("Access-Control-Allow-Origin", "*");
+		h.put("Accept-Ranges", "bytes");
+		h.put("Cache-Control", "no-store");
+		int from = 0, to = data.length - 1, status = 200;
+		String range = null;
+		for (java.util.Map.Entry<String, String> e : request.getRequestHeaders().entrySet()) {
+			if ("range".equalsIgnoreCase(e.getKey())) range = e.getValue();
+		}
+		if ((range != null) && range.startsWith("bytes=")) {
+			try {
+				String[] p = range.substring(6).split(",")[0].trim().split("-", -1);
+				if (!p[0].isEmpty()) {
+					from = Integer.parseInt(p[0]);
+					if ((p.length > 1) && !p[1].isEmpty()) to = Math.min(to, Integer.parseInt(p[1]));
+				} else if ((p.length > 1) && !p[1].isEmpty()) {
+					from = Math.max(0, data.length - Integer.parseInt(p[1]));
+				}
+				if (from > to) from = to;
+				status = 206;
+				h.put("Content-Range", "bytes " + from + "-" + to + "/" + data.length);
+			} catch (NumberFormatException ignored) {
+				from = 0;
+				to = data.length - 1;
+			}
+		}
+		h.put("Content-Length", String.valueOf(to - from + 1));
+		return new android.webkit.WebResourceResponse("video/webm", null, status,
+				(status == 206) ? "Partial Content" : "OK", h,
+				new java.io.ByteArrayInputStream(data, from, to - from + 1));
+	}
+
 	static boolean isGoogleSignIn(String host) {
 		if (host == null) return false;
 		host = host.toLowerCase(java.util.Locale.ROOT);
