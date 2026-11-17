@@ -44,8 +44,8 @@ public final class XfInstallReport {
 	public static void show(MainActivityDelegate a) {
 		Context ctx = a.getContext();
 		String text = build(ctx);
-		// Three buttons at most: with a wrong install source "Fix now" takes the place of Close
-		boolean fix = XfInstallFix.needed(ctx) && XfInstallFix.available(ctx);
+		// Three buttons at most: unless the install record is good, "Fix now" takes the place of Close
+		boolean fix = XfInstallFix.offered(ctx) && XfInstallFix.available(ctx);
 		try {
 			a.createDialogBuilder()
 					.setTitle(R.string.xf_aa_check)
@@ -158,28 +158,37 @@ public final class XfInstallReport {
 						"granted" : "not granted").append('\n');
 
 		// Patikrinta 2026-11-16: telefone, kuriame video programa rodoma (Samsung, diegta per
-		// AAenabler), Installer = com.android.vending, Initiated by = sisteminis diegiklis.
-		if (PLAY_STORE.equals(installer)) {
-			b.append("\nRESULT: the install source is Google Play Store, as on a phone where the " +
-					"video app shows up. Look for the video app on the car screen: the Customize " +
-					"launcher list on the phone may not show it while no car is connected. If the car " +
-					"screen still shows only the audio entry and you used Fix now, uninstall and install " +
-					"through AAenabler: on some cars the fix is not enough.\n");
-		} else {
-			b.append("\nRESULT: the installer is not Google Play Store. On a phone where the video " +
-					"app shows up it is com.android.vending, so this is the most likely reason why " +
-					"Android Auto hides the video app.\n" +
-					(XfInstallFix.available(ctx) ?
-							"1. Tap Fix now (experimental, not enough on some cars): the app reinstalls itself " +
-									"through the phone's Wireless debugging.\n" +
-									"2. Reliable way: uninstall, then install through AAenabler: open AAenabler and pick " +
-									"the APK from inside it. Run this check again.\n" :
-							"1. Uninstall, then install through AAenabler: open AAenabler and pick the APK " +
-									"from inside it. Run this check again.\n" +
-									"2. Still not Google Play Store? Then the phone's own installer ignores " +
-									"the request.\n") +
-					"3. Or install from a PC:\n" +
-					"   adb install -r -i com.android.vending xFermaTube.apk\n");
+		// AAenabler), Installer = com.android.vending, Initiated by = sisteminis diegiklis. Po
+		// "pm install -i" (Initiated by = com.android.shell) tas pats automobilis video programos nerodė.
+		String fixHow = XfInstallFix.available(ctx) ?
+				"1. Tap Fix now: the app asks the phone's installer to install it again, marked as " +
+						"coming from Google Play Store. One tap on Update, settings are kept.\n" +
+						"2. Or uninstall, then install through AAenabler: open AAenabler and pick the APK " +
+						"from inside it. Run this check again.\n" :
+				"1. Uninstall, then install through AAenabler: open AAenabler and pick the APK " +
+						"from inside it. Run this check again.\n";
+		switch (XfInstallFix.verdict(ctx)) {
+			case GOOD -> b.append("\nRESULT: good. Google Play Store is the installer and the phone's " +
+					"installer did the install, as on a phone where the video app shows up. Look for the " +
+					"video app on the car screen: the Customize launcher list on the phone may not show " +
+					"it while no car is connected.\n");
+			case BAD -> {
+				if (PLAY_STORE.equals(installer)) {
+					b.append("\nRESULT: not accepted. Google Play Store is the installer, but the install " +
+							"was started by the ADB shell (adb install -i, or Fix now of an older xFermaTube). " +
+							"Android Auto in a car does not take that: on a phone where the video app shows " +
+							"up, Initiated by is the phone's package installer.\n").append(fixHow);
+				} else {
+					b.append("\nRESULT: not accepted. The installer is not Google Play Store. On a phone " +
+							"where the video app shows up it is com.android.vending, so this is the most " +
+							"likely reason why Android Auto hides the video app.\n").append(fixHow);
+				}
+				b.append("Installing from a PC with adb install -i com.android.vending is not enough: " +
+						"the install is then recorded as started by the shell.\n");
+			}
+			default -> b.append("\nRESULT: unclear. This combination of Installer and Initiated by has " +
+					"not been reported yet. If the car screen shows only the audio entry, fix it:\n")
+					.append(fixHow);
 		}
 		b.append("\nNot readable by the app, check by hand: Android Auto settings > Developer " +
 				"settings > Unknown sources must be ticked.\n");

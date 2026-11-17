@@ -5,10 +5,13 @@
 	tools:ignore="MissingLeanbackSupport">
 
     <uses-permission android:name="android.permission.WAKE_LOCK" />
-    <!-- xFermaTube (YouTube only): DISABLE_KEYGUARD, SYSTEM_ALERT_WINDOW, REQUEST_INSTALL_PACKAGES,
-         RECEIVE_BOOT_COMPLETED, FOREGROUND_SERVICE_MEDIA_PROJECTION, WRITE_SECURE_SETTINGS and
-         MANAGE_EXTERNAL_STORAGE are not requested: mirror, car apps over ADB and local files are
-         not reachable in this build. -->
+    <!-- xFermaTube (YouTube only): DISABLE_KEYGUARD, SYSTEM_ALERT_WINDOW, RECEIVE_BOOT_COMPLETED,
+         FOREGROUND_SERVICE_MEDIA_PROJECTION, WRITE_SECURE_SETTINGS and MANAGE_EXTERNAL_STORAGE are
+         not requested: mirror, car apps over ADB and local files are not reachable in this build. -->
+    <!-- xFermaTube: "Fix install source" asks the phone's installer to install the app's own APK
+         again. The phone's installer refuses a request from an app that does not declare this, and
+         the user has to allow it for the app ("Install unknown apps"). Nothing else is installed. -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
 	<!-- Auto can run on TV-style head units that do not expose a touchscreen. -->
 	<uses-feature
@@ -18,6 +21,13 @@
     <queries>
         <intent>
             <action android:name="android.intent.action.MAIN" />
+        </intent>
+        <!-- xFermaTube: "Fix install source" has to find the phone's own package installer -->
+        <intent>
+            <action android:name="android.intent.action.INSTALL_PACKAGE" />
+            <data
+                android:mimeType="application/vnd.android.package-archive"
+                android:scheme="content" />
         </intent>
         <package android:name="com.topjohnwu.magisk" />
         <package android:name="me.weishu.kernelsu" />
@@ -156,10 +166,17 @@
             android:name="me.app.fermatax.auto.carapps.adb.AdbPairing$Receiver"
             android:exported="false" />
 
-        <!-- xFermaTube: "Fix install source" (reinstall through the phone's own Wireless debugging) -->
+        <!-- xFermaTube: "Fix install source" (the phone's installer reinstalls the app "from Google Play") -->
         <activity
             android:name="me.app.fermatax.auto.xf.XfInstallFixActivity"
             android:exported="false" />
+
+        <!-- Serves only the app's own APK, read-only, to the installer that was given a grant for it -->
+        <provider
+            android:name="me.app.fermatax.auto.xf.XfApkProvider"
+            android:authorities="${applicationId}.xfapk"
+            android:exported="false"
+            android:grantUriPermissions="true" />
 
         <receiver
             android:name="me.app.fermatax.auto.xf.XfInstallFixer$Receiver"

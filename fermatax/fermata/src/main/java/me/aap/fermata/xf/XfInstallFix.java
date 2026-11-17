@@ -14,17 +14,40 @@ import me.aap.fermata.ui.activity.MainActivityDelegate;
 import me.aap.utils.log.Log;
 
 /**
- * xFermaTube: Android Auto shows a sideloaded video app only when its install source is Google Play
- * Store. This class knows whether the source is wrong and offers the fix: the app reinstalls itself
- * through the phone's own Wireless debugging (the work is done by XfInstallFixer in the auto flavor).
+ * xFermaTube: Android Auto shows a sideloaded video app only when it was installed "from Google
+ * Play": the installer on record must be Google Play Store, and the install must have been started
+ * by the phone's own package installer (or Play Store), not by the ADB shell. This class reads that
+ * record, says whether it is good, and offers the fix. The fix itself (the app asks the phone's
+ * installer to install it again with that mark) is in the auto flavor: XfInstallFixActivity.
  * The check runs when the app is opened on the phone, never on the car screen.
  */
 public final class XfInstallFix {
 	public static final String PLAY_STORE = "com.android.vending";
+	public static final String SHELL = "com.android.shell";
+	/** The app itself opened the phone's installer. */
+	public static final int WAY_SIMPLE = 1;
+	/** The shell opened the phone's installer, through Wireless debugging. */
+	public static final int WAY_SHELL = 2;
+
+	public enum Verdict {
+		/** As on a phone where the video app shows up. */
+		GOOD,
+		/** Known not to be accepted: the installer is not Play Store, or the shell started the install. */
+		BAD,
+		/** Not readable, or a combination nobody has reported yet. */
+		UNKNOWN
+	}
+
 	private static final String ACTIVITY = "me.app.fermatax.auto.xf.XfInstallFixActivity";
 	private static final String PREFS = "xf_install_fix";
-	/** When the reinstall command was started: the app is killed by it and reads this on the next start. */
+	/** When a reinstall was started: the app is killed by it and reads this on the next start. */
 	private static final String STARTED = "started";
+	/** lastUpdateTime when that reinstall was started: tells whether it has happened. */
+	private static final String STARTED_UPDATED = "startedUpdated";
+	private static final String STARTED_WAY = "startedWay";
+	/** A reinstall was done that way and the record came out wrong: this phone does not keep the mark. */
+	private static final String SIMPLE_FAILED = "simpleFailed";
+	private static final String SHELL_FAILED = "shellFailed";
 	/** lastUpdateTime of the install for which the user answered "Not now". */
 	private static final String SKIPPED = "skipped";
 	private static final long RESULT_WINDOW_MS = 15 * 60 * 1000L;
@@ -47,15 +70,49 @@ public final class XfInstallFix {
 		}
 	}
 
-	/** True only when the installer was read and is not Google Play Store. */
-	public static boolean needed(Context ctx) {
-		String i = installer(ctx);
-		return !PLAY_STORE.equals(i) && !"?".equals(i);
+	/** The package that started the install (Android 11+), null when there is none; "?" when it cannot be read. */
+	public static String initiator(Context ctx) {
+		if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return null;
+		try {
+			return ctx.getPackageManager().getInstallSourceInfo(ctx.getPackageName()).getInitiatingPackageName();
+		} catch (Exception ex) {
+			return "?";
+		}
 	}
 
-	/** Wireless debugging exists from Android 11; the fix screen is part of the auto flavor. */
+	public static Verdict verdict(Context ctx) {
+		return verdict(installer(ctx), initiator(ctx), Build.VERSION.SDK_INT);
+	}
+
+	/**
+	 * Measured 2026-11: with Installer = Play Store and Initiated by = the system package installer
+	 * (AAenabler on a Samsung) the car shows the video app; with Initiated by = shell ("pm install -i"
+	 * or "adb install -i") it does not. The open tools KingInstaller and UnknownAuto use the same rule.
+	 */
+	static Verdict verdict(String installer, String initiator, int sdk) {
+		if ("?".equals(installer)) return Verdict.UNKNOWN;
+		if (!PLAY_STORE.equals(installer)) return Verdict.BAD;
+		if (sdk < Build.VERSION_CODES.R) return Verdict.GOOD;
+		if (SHELL.equals(initiator)) return Verdict.BAD;
+		if (PLAY_STORE.equals(initiator) || ((initiator != null) && initiator.contains("packageinstaller"))) {
+			return Verdict.GOOD;
+		}
+		return Verdict.UNKNOWN;
+	}
+
+	/** True when the install record is known not to be accepted by Android Auto. */
+	public static boolean needed(Context ctx) {
+		return verdict(ctx) == Verdict.BAD;
+	}
+
+	/** True unless the install record is known to be good: the fix is then offered in the settings. */
+	public static boolean offered(Context ctx) {
+		return verdict(ctx) != Verdict.GOOD;
+	}
+
+	/** The fix screen is part of the auto flavor. */
 	public static boolean available(Context ctx) {
-		if (!BuildConfig.AUTO || (Build.VERSION.SDK_INT < Build.VERSION_CODES.R)) return false;
+		if (!BuildConfig.AUTO) return false;
 		try {
 			return ctx.getPackageManager().resolveActivity(intent(ctx), 0) != null;
 		} catch (Exception ex) {
@@ -79,55 +136,104 @@ public final class XfInstallFix {
 		return ctx.getApplicationContext().getSharedPreferences(PREFS, Context.MODE_PRIVATE);
 	}
 
-	/** Written synchronously: the reinstall kills the process a few seconds later. */
-	public static void markStarted(Context ctx) {
+	private static long updated(Context ctx) {
+		try {
+			return ctx.getPackageManager().getPackageInfo(ctx.getPackageName(), 0).lastUpdateTime;
+		} catch (Exception ex) {
+			return 0;
+		}
+	}
+
+	/** Written synchronously: the reinstall kills the process. */
+	public static void markStarted(Context ctx, int way) {
 		running = true;
-		prefs(ctx).edit().putLong(STARTED, System.currentTimeMillis()).commit();
+		prefs(ctx).edit().putLong(STARTED, System.currentTimeMillis()).putLong(STARTED_UPDATED, updated(ctx))
+				.putInt(STARTED_WAY, way).commit();
+	}
+
+	/**
+	 * The installer window is open and the rest is up to the user. If the app is opened again without
+	 * having been replaced, the startup check may say that the reinstall did not finish.
+	 */
+	public static void handedOver() {
+		running = false;
 	}
 
 	public static void clearStarted(Context ctx) {
 		running = false;
-		prefs(ctx).edit().remove(STARTED).apply();
+		prefs(ctx).edit().remove(STARTED).remove(STARTED_UPDATED).remove(STARTED_WAY).apply();
+	}
+
+	/** The phone's installer did not keep the Play Store mark when the app itself opened it. */
+	public static boolean simpleFailed(Context ctx) {
+		return prefs(ctx).getBoolean(SIMPLE_FAILED, false);
+	}
+
+	/** The user picked the other way without a failed reinstall, e.g. the installer could not be opened. */
+	public static void skipSimple(Context ctx) {
+		prefs(ctx).edit().putBoolean(SIMPLE_FAILED, true).apply();
+	}
+
+	public static boolean shellFailed(Context ctx) {
+		return prefs(ctx).getBoolean(SHELL_FAILED, false);
+	}
+
+	/** Start over with the simple way. */
+	public static void resetFailed(Context ctx) {
+		prefs(ctx).edit().remove(SIMPLE_FAILED).remove(SHELL_FAILED).apply();
 	}
 
 	/**
 	 * Called when the app is opened on the phone. Shows the result of a reinstall that has just
-	 * happened, or offers the fix when the install source is wrong. Returns true if a dialog was shown.
+	 * happened, or offers the fix when the install record is wrong. Returns true if a dialog was shown.
 	 */
 	public static boolean checkAtStartup(MainActivityDelegate a) {
 		if (!XfConfig.YOUTUBE_ONLY || a.isCarActivity() || running) return false;
 		try {
 			Context ctx = a.getContext();
 			SharedPreferences sp = prefs(ctx);
-			boolean needed = needed(ctx);
-			boolean fixed = PLAY_STORE.equals(installer(ctx));
+			Verdict verdict = verdict(ctx);
+			boolean fixed = verdict == Verdict.GOOD;
+			long updated = updated(ctx);
 			long started = sp.getLong(STARTED, 0);
-			// With the right install source the app needs no ADB access, whenever it is opened
-			if (fixed) forgetAdbKey(ctx);
+			// With a good install record the app needs no ADB access, whenever it is opened
+			if (fixed) {
+				forgetAdbKey(ctx);
+				if (simpleFailed(ctx) || shellFailed(ctx)) resetFailed(ctx);
+			}
 
 			if (started != 0) {
-				sp.edit().remove(STARTED).apply();
+				long startedUpdated = sp.getLong(STARTED_UPDATED, updated);
+				int way = sp.getInt(STARTED_WAY, 0);
+				sp.edit().remove(STARTED).remove(STARTED_UPDATED).remove(STARTED_WAY).apply();
+				// Reinstalled, and the record is still wrong: that way does not work on this phone.
+				// Remembered however late the app is opened again, so that the next try takes the other way.
+				boolean reinstalled = (updated != 0) && (updated != startedUpdated);
+				boolean ignored = reinstalled && (verdict == Verdict.BAD) && (way != 0);
+				if (ignored) sp.edit().putBoolean((way == WAY_SHELL) ? SHELL_FAILED : SIMPLE_FAILED, true).apply();
 				long age = System.currentTimeMillis() - started;
 				if ((age >= 0) && (age < RESULT_WINDOW_MS)) {
 					if (fixed) {
-						a.getHandler().post(() -> show(a, R.string.xf_fix_done_title, ctx.getString(R.string.xf_fix_done),
-								0, null, R.string.xf_close, null));
+						String msg = ctx.getString(R.string.xf_fix_done) +
+								((way == WAY_SHELL) ? "\n\n" + ctx.getString(R.string.xf_fix_done_wireless) : "");
+						a.getHandler().post(() -> show(a, R.string.xf_fix_done_title, msg, 0, null, R.string.xf_close, null));
 						return true;
 					}
-					if (available(ctx)) {
-						a.getHandler().post(() -> show(a, R.string.xf_fix_title, ctx.getString(R.string.xf_fix_unfinished),
+					if ((verdict == Verdict.BAD) && available(ctx)) {
+						int msg = ignored ? R.string.xf_fix_ignored : R.string.xf_fix_unfinished;
+						a.getHandler().post(() -> show(a, R.string.xf_fix_title, ctx.getString(msg),
 								R.string.xf_fix_open, () -> open(ctx), R.string.xf_close, null));
 						return true;
 					}
 				}
 			}
 
-			if (!needed || !available(ctx)) return false;
-			long updated = ctx.getPackageManager().getPackageInfo(ctx.getPackageName(), 0).lastUpdateTime;
+			if ((verdict != Verdict.BAD) || !available(ctx)) return false;
 			if (sp.getLong(SKIPPED, 0) == updated) return false;
 			String from = installer(ctx);
+			String by = initiator(ctx);
 			a.getHandler().post(() -> show(a, R.string.xf_fix_ask_title,
-					ctx.getString(R.string.xf_fix_ask, (from == null) ? "none" : from),
+					ctx.getString(R.string.xf_fix_ask, (from == null) ? "none" : from, (by == null) ? "none" : by),
 					R.string.xf_fix_now, () -> open(ctx),
 					R.string.xf_mic_later, () -> sp.edit().putLong(SKIPPED, updated).apply()));
 			return true;

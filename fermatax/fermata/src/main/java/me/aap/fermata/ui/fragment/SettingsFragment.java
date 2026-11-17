@@ -522,7 +522,7 @@ public class SettingsFragment extends MainActivityFragment
 				o.subtitle = R.string.xf_aa_check_sub;
 				o.onClick = () -> me.aap.fermata.xf.XfInstallReport.show(a);
 			});
-			if (me.aap.fermata.xf.XfInstallFix.needed(a.getContext()) &&
+			if (me.aap.fermata.xf.XfInstallFix.offered(a.getContext()) &&
 					me.aap.fermata.xf.XfInstallFix.available(a.getContext())) {
 				set.addButton(o -> {
 					o.title = R.string.xf_fix_title;

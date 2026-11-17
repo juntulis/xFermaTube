@@ -11,6 +11,10 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageManager;
+import android.content.pm.ResolveInfo;
+import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 
 import androidx.annotation.Nullable;
@@ -35,40 +39,41 @@ import me.app.fermatax.auto.carapps.adb.AdbConnectPort;
 import me.app.fermatax.auto.carapps.adb.LocalAdb;
 
 /**
- * xFermaTube: reinstalls the app with Google Play Store as its install source, which is what Android
- * Auto wants before it shows a sideloaded video app. The app cannot do that with its own rights, so
- * it uses the phone's own Wireless debugging (Android 11+) over loopback: the user pairs once with
- * the 6-digit code typed into a notification, then the shell runs "pm install -r -i
- * com.android.vending" on a copy of the installed APK. Settings and data are kept.
+ * xFermaTube: the second way to reinstall the app "from Google Play", for phones whose installer
+ * drops the Play Store mark when the app itself opens it (the first way, in XfInstallFixActivity).
+ * Here the ADB shell opens the phone's package installer on the app's own APK: the shell is allowed
+ * to name Play Store as the installer, and the install is still started by the system installer,
+ * which is what Android Auto checks. A plain "pm install -i com.android.vending" is not enough: the
+ * install is then recorded as started by the shell, and the car hides the video app.
  * <p>
- * The reinstall kills this process, so the command runs detached and starts the app again.
- * If the process is still alive later, the command's log is read to tell the user why it failed.
- * The pairing code is never logged or stored.
+ * The shell is reached through the phone's own Wireless debugging over loopback: the user pairs once
+ * with the 6-digit code typed into a notification. The user then confirms the installer's Update
+ * window. Settings and data are kept. The pairing code is never logged or stored.
+ * <p>
+ * Works on Android 15+ (older versions refuse an installer window opened by the shell), and not on
+ * Samsung, whose installer ignores the mark when the shell asks.
  */
 public final class XfInstallFixer {
 	public enum State {
 		IDLE, CHECKING, NO_WIRELESS, NOTIFICATIONS_OFF, WAITING_CODE, PAIRING, WRONG_CODE, PAIR_FAILED,
+		/** The installer window was opened: the rest is the user's tap on Update. */
 		INSTALLING, FAILED
 	}
 
-	/** detail() of a reinstall that neither killed the app nor wrote a result. */
-	public static final String NO_RESULT = "no result";
+	private static final String GOOGLE_INSTALLER = "com.google.android.packageinstaller";
+	private static final String AOSP_INSTALLER = "com.android.packageinstaller";
 	private static final String CHANNEL = "xf_install_fix";
 	private static final int NOTIFICATION_ID = 0x5f1c;
 	private static final String KEY_CODE = "code";
-	private static final String TMP = "/data/local/tmp/xf-fix";
 	private static final long PAIRING_PORT_TIMEOUT_MS = 8000;
 	private static final long CONNECT_PORT_TIMEOUT_MS = 5000;
 	/** A receiver may hold the broadcast for about 10 s; the work continues after it is released. */
 	private static final long RECEIVER_HOLD_MS = 9000;
 	private static final long REPLY_TIMEOUT_MS = 10 * 60 * 1000L;
-	/** The log is read 8, 30 and 90 seconds after the command was started. */
-	private static final long[] WATCH_MS = {8000, 22000, 60000};
 
 	private static final List<Runnable> listeners = new CopyOnWriteArrayList<>();
 	private static volatile State state = State.IDLE;
 	private static volatile String detail = "";
-	private static int run;
 	/** A lookup for the system pairing window is running. */
 	private static boolean pairingWatch;
 
@@ -79,9 +84,64 @@ public final class XfInstallFixer {
 		return state;
 	}
 
-	/** Why the reinstall failed: the shell's answer, NO_RESULT, or a short reason. */
+	/** Why the installer could not be opened: the shell's answer or a short reason. */
 	public static String detail() {
 		return detail;
+	}
+
+	/** Android 15+ and not Samsung: see the class comment. */
+	public static boolean supported() {
+		return (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) &&
+				!"samsung".equalsIgnoreCase(Build.MANUFACTURER);
+	}
+
+	/**
+	 * The phone's own package installer window for an APK: Google's, else AOSP's, else another app
+	 * that is part of the system. Null when no system app takes APK installs.
+	 */
+	@Nullable
+	static ComponentName systemInstaller(Context ctx) {
+		ComponentName best = null;
+		int bestRank = Integer.MAX_VALUE;
+		for (ResolveInfo ri : installers(ctx)) {
+			if (!isSystem(ri)) continue;
+			String p = ri.activityInfo.packageName;
+			int rank = GOOGLE_INSTALLER.equals(p) ? 0 : AOSP_INSTALLER.equals(p) ? 1 : 2;
+			if (rank < bestRank) {
+				best = new ComponentName(p, ri.activityInfo.name);
+				bestRank = rank;
+			}
+		}
+		return best;
+	}
+
+	/**
+	 * True when an app that is not part of the system also takes APK installs (an installer app the
+	 * user added). Its installs never carry the Play Store mark, so the request must name the system one.
+	 */
+	static boolean hasOtherInstaller(Context ctx) {
+		for (ResolveInfo ri : installers(ctx)) {
+			if (!isSystem(ri)) return true;
+		}
+		return false;
+	}
+
+	static Intent installIntent(Context ctx) {
+		return new Intent(Intent.ACTION_INSTALL_PACKAGE).setDataAndType(XfApkProvider.uri(ctx), XfApkProvider.MIME);
+	}
+
+	private static List<ResolveInfo> installers(Context ctx) {
+		try {
+			return ctx.getPackageManager().queryIntentActivities(installIntent(ctx), PackageManager.MATCH_DEFAULT_ONLY);
+		} catch (RuntimeException ex) {
+			Log.e(ex, "Failed to look for package installers");
+			return List.of();
+		}
+	}
+
+	private static boolean isSystem(ResolveInfo ri) {
+		return (ri.activityInfo != null) && (ri.activityInfo.applicationInfo != null) &&
+				((ri.activityInfo.applicationInfo.flags & ApplicationInfo.FLAG_SYSTEM) != 0);
 	}
 
 	public static void addListener(Runnable listener) {
@@ -92,22 +152,33 @@ public final class XfInstallFixer {
 		listeners.remove(listener);
 	}
 
-	/** Back to the start after a failure, so that start() runs again. */
-	public static void reset() {
+	/** Back to the start after a failure or a cancelled installer window, so that start() runs again. */
+	public static void reset(Context c) {
+		Context ctx = c.getApplicationContext();
+		boolean opened;
 		synchronized (XfInstallFixer.class) {
 			if (busy()) return;
+			opened = state == State.INSTALLING;
 			state = State.IDLE;
+		}
+		// The installer window was closed without an install: that attempt is over
+		if (opened) XfInstallFix.clearStarted(ctx);
+		try {
+			NotificationManagerCompat.from(ctx).cancel(NOTIFICATION_ID);
+		} catch (RuntimeException ex) {
+			Log.e(ex, "Failed to cancel the install fix notification");
 		}
 		notifyListeners();
 	}
 
-	private static boolean busy() {
+	/** Looking for Wireless debugging or pairing: the way must not be changed under it. */
+	static boolean busy() {
 		State s = state;
-		return (s == State.CHECKING) || (s == State.PAIRING) || (s == State.INSTALLING);
+		return (s == State.CHECKING) || (s == State.PAIRING);
 	}
 
 	/**
-	 * Looks for Wireless debugging. If the app is already paired the reinstall starts right away,
+	 * Looks for Wireless debugging. If the app is already paired the installer is opened right away,
 	 * otherwise the notification that takes the pairing code is posted.
 	 */
 	public static void start(Context c) {
@@ -189,7 +260,8 @@ public final class XfInstallFixer {
 		Context ctx = c.getApplicationContext();
 		boolean valid = (input != null) && input.matches("[0-9]{6}");
 		synchronized (XfInstallFixer.class) {
-			if (busy()) return completedVoid(); // a stray reply must not disturb the running work
+			// A stray reply must not disturb the running work or open a second installer window
+			if (busy() || (state == State.INSTALLING)) return completedVoid();
 			if (valid) state = State.PAIRING;
 		}
 		if (!valid) {
@@ -238,18 +310,19 @@ public final class XfInstallFixer {
 			fail(ctx, String.valueOf(ex.getMessage()));
 			return;
 		}
-		XfInstallFix.markStarted(ctx);
-		adb.runAndClose(port, command).onCompletion((r, err) -> {
+		XfInstallFix.markStarted(ctx, XfInstallFix.WAY_SHELL);
+		adb.runForOutput(port, command).onCompletion((out, err) -> {
 			adb.close();
 			if (err == null) {
-				int id;
-				synchronized (XfInstallFixer.class) {
-					state = State.INSTALLING;
-					id = ++run;
+				// "am start" answers "Starting: Intent {…}", or an Error / exception line when it cannot
+				String text = (out == null) ? "" : out.trim();
+				if (text.contains("Error") || text.contains("Exception")) {
+					fail(ctx, text);
+					return;
 				}
-				notifyListeners();
+				XfInstallFix.handedOver();
+				setState(State.INSTALLING);
 				post(ctx, R.string.xf_fix_notif_installing, false, false);
-				watchLater(ctx, id, 0);
 			} else if (askCodeOnFailure) { // the old pairing is gone or was revoked: pair again
 				XfInstallFix.clearStarted(ctx);
 				Log.w("ADB connection failed: ", err.getClass().getSimpleName());
@@ -262,38 +335,31 @@ public final class XfInstallFixer {
 	}
 
 	/**
-	 * The shell job: copy the installed APK, install the copy with Play Store as the installer and
-	 * start the app again. It runs detached with SIGHUP ignored, because this process (the ADB
-	 * client) is killed by the install. Only paths made of safe characters go into the command.
+	 * The shell command: open the phone's package installer on the app's own APK, with Play Store
+	 * named as the installer. The shell cannot give the installer access to the APK, so the app grants
+	 * it first. Only names made of safe characters go into the command.
 	 */
 	static String command(Context ctx) {
-		ApplicationInfo ai = ctx.getApplicationInfo();
-		if ((ai.splitSourceDirs != null) && (ai.splitSourceDirs.length > 0)) {
-			throw new IllegalStateException("The app is installed as split APKs");
+		try {
+			XfApkProvider.apk(ctx);
+		} catch (java.io.FileNotFoundException ex) {
+			throw new IllegalStateException(ex.getMessage());
 		}
-		String src = ai.sourceDir;
-		String pkg = ctx.getPackageName();
-		if ((src == null) || !src.matches("[A-Za-z0-9_./~=+-]+") || !pkg.matches("[A-Za-z0-9_.]+")) {
-			throw new IllegalStateException("Unexpected APK path");
+		ComponentName installer = systemInstaller(ctx);
+		if (installer == null) throw new IllegalStateException("No system package installer was found");
+		String name = installer.flattenToString();
+		Uri apk = XfApkProvider.uri(ctx);
+		String uri = apk.toString();
+		if (!name.matches("[A-Za-z0-9_./]+") || !uri.matches("content://[A-Za-z0-9_./]+")) {
+			throw new IllegalStateException("Unexpected installer name");
 		}
-		String apk = TMP + ".apk";
-		String log = TMP + ".log";
-		String pid = TMP + ".pid";
-		String start = "";
-		Intent li = ctx.getPackageManager().getLaunchIntentForPackage(pkg);
-		ComponentName cn = (li == null) ? null : li.getComponent();
-		if (cn != null) {
-			String name = cn.flattenToShortString();
-			if (name.matches("[A-Za-z0-9_./]+")) start = "sleep 1; am start -n " + name + " >/dev/null 2>&1; ";
-		}
-		String job = "echo $$ >" + pid + "; sleep 2; cp " + src + " " + apk + " >" + log +
-				" 2>&1 && pm install -r -i " + XfInstallFix.PLAY_STORE + " " + apk + " >>" + log +
-				" 2>&1 && { rm -f " + log + "; " + start + "}; rm -f " + apk + " " + pid;
-		// One job at a time: an earlier one may still wait for the user's answer to an install question
-		return "trap '' HUP; P=$(cat " + pid + " 2>/dev/null); " +
-				"if [ -n \"$P\" ] && grep -q xf-fix /proc/$P/cmdline 2>/dev/null; then exit 0; fi; " +
-				"rm -f " + apk + " " + log + "; nohup $(command -v setsid) sh -c '" + job +
-				"' >/dev/null 2>&1 </dev/null &";
+		ctx.grantUriPermission(installer.getPackageName(), apk, Intent.FLAG_GRANT_READ_URI_PERMISSION);
+		return "am start -n " + name + " -a android.intent.action.INSTALL_PACKAGE -d " + uri +
+				" -t " + XfApkProvider.MIME +
+				" --es android.intent.extra.INSTALLER_PACKAGE_NAME " + XfInstallFix.PLAY_STORE +
+				" --ez android.intent.extra.NOT_UNKNOWN_SOURCE true" +
+				" --ei android.intent.extra.INSTALL_REASON 1" +
+				" --es android.intent.extra.REFERRER_NAME android-app://" + XfInstallFix.PLAY_STORE + " 2>&1";
 	}
 
 	/** Off for the app, or only for this channel: either way the code cannot be typed. */
@@ -302,40 +368,6 @@ public final class XfInstallFixer {
 		if (!nm.areNotificationsEnabled()) return false;
 		NotificationChannel ch = nm.getNotificationChannel(CHANNEL);
 		return (ch == null) || (ch.getImportance() != NotificationManager.IMPORTANCE_NONE);
-	}
-
-	private static void watchLater(Context ctx, int id, int step) {
-		App.get().getScheduler().schedule(() -> watch(ctx, id, step), WATCH_MS[step], TimeUnit.MILLISECONDS);
-	}
-
-	/** Still alive: the install has not replaced the app (yet). A non-empty log says why. */
-	private static void watch(Context ctx, int id, int step) {
-		if (!watching(id)) return;
-		boolean last = step == WATCH_MS.length - 1;
-		LocalAdb adb;
-		try {
-			adb = new LocalAdb(ctx);
-		} catch (Throwable t) {
-			if (last) fail(ctx, NO_RESULT);
-			else watchLater(ctx, id, step + 1);
-			return;
-		}
-		port(ctx, null, CONNECT_PORT_TIMEOUT_MS)
-				.then(port -> adb.runForOutput(port, "cat " + TMP + ".log 2>/dev/null"))
-				.onCompletion((out, err) -> {
-					adb.close();
-					if (!watching(id)) return;
-					String text = ((err != null) || (out == null)) ? "" : out.trim();
-					if (!text.isEmpty() && !text.contains("Success")) fail(ctx, text);
-					else if (last) fail(ctx, NO_RESULT);
-					else watchLater(ctx, id, step + 1);
-				});
-	}
-
-	private static boolean watching(int id) {
-		synchronized (XfInstallFixer.class) {
-			return (state == State.INSTALLING) && (id == run);
-		}
 	}
 
 	private static void fail(Context ctx, String why) {

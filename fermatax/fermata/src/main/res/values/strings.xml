@@ -22,44 +22,58 @@ Android Auto cannot show this request on the car screen, so it is asked here.</s
     <string name="xf_share" translatable="false">Share</string>
     <string name="xf_close" translatable="false">Close</string>
     <string name="xf_fix_title" translatable="false">Fix install source</string>
-    <string name="xf_fix_sub" translatable="false">Reinstalls the app with Google Play Store as the install source, so that Android Auto shows the video app.</string>
+    <string name="xf_fix_sub" translatable="false">Reinstalls the app as coming from Google Play Store, so that Android Auto shows the video app.</string>
     <string name="xf_fix_now" translatable="false">Fix now</string>
     <string name="xf_fix_open" translatable="false">Open the fix</string>
     <string name="xf_fix_ask_title" translatable="false">Android Auto may hide the video app</string>
-    <string name="xf_fix_ask" translatable="false">This copy of xFermaTube was not installed with Google Play Store as its install source (installer: %1$s). Android Auto then usually shows only the audio entry.\n\nThe app can try to fix this itself (experimental): it reinstalls itself through the phone\'s Wireless debugging. It takes about a minute, the phone must be on Wi‑Fi, and your settings are kept. On some cars this is not enough; the reliable way is to uninstall and install through AAenabler.\n\nIf the video app already shows up in the car, tap Not now.</string>
+    <string name="xf_fix_ask" translatable="false">This copy of xFermaTube is not recorded as installed from Google Play Store (installer: %1$s, started by: %2$s). Android Auto then usually shows only the audio entry.\n\nThe app can fix this itself: it asks the phone\'s installer to install it again, marked as coming from Google Play Store. You confirm with one tap on Update. Settings and sign‑in are kept, and no PC or Wi‑Fi is needed.\n\nIf the video app already shows up in the car, tap Not now.</string>
     <string name="xf_fix_done_title" translatable="false">Install source fixed</string>
-    <string name="xf_fix_done" translatable="false">The install source is now Google Play Store. Force stop Android Auto or reconnect the phone to the car: the video app (play icon) should show up on the car screen. The Customize launcher list on the phone may not show it while no car is connected.\n\nThis fix is experimental: some cars still show only the audio entry. If yours does, uninstall xFermaTube and install it through AAenabler.\n\nYou can turn Wireless debugging off again in Developer options.</string>
-    <string name="xf_fix_unfinished" translatable="false">The reinstall did not finish: the install source is still not Google Play Store. Open the fix again to see what went wrong.</string>
-    <string name="xf_fix_intro" translatable="false">Android Auto shows a sideloaded video app only when Google Play Store is recorded as its installer. The app reinstalls itself that way through the phone\'s own Wireless debugging. Settings and sign‑in are kept.\n\nExperimental: on some cars this is not enough. It needs Wi‑Fi (any network, internet is not required). Without Wi‑Fi you can do the same from a PC over a USB cable:\nadb install -r -i com.android.vending xFermaTube.apk</string>
+    <string name="xf_fix_done" translatable="false">The app is now recorded as installed from Google Play Store by the phone\'s installer, as on a phone where the video app shows up. Force stop Android Auto or reconnect the phone to the car: the video app (play icon) should show up on the car screen. The Customize launcher list on the phone may not show it while no car is connected.\n\nYou can turn “Install unknown apps” off again for xFermaTube in the phone\'s settings.</string>
+    <string name="xf_fix_done_wireless" translatable="false">You can also turn Wireless debugging off again in Developer options.</string>
+    <string name="xf_fix_unfinished" translatable="false">The reinstall did not finish: the install record is still not one that Android Auto accepts. Open the fix again.</string>
+    <string name="xf_fix_ignored" translatable="false">The app was reinstalled, but this phone\'s installer did not keep the Google Play Store mark. Open the fix again: it shows what else can be done on this phone.</string>
+    <string name="xf_fix_intro" translatable="false">Android Auto shows a sideloaded video app only when it was installed “from Google Play”: Play Store is recorded as the installer, and the phone\'s own installer did the install. The app asks the phone\'s installer to install it again that way. Settings and sign‑in are kept. No PC and no Wi‑Fi is needed.</string>
+    <string name="xf_fix_intro_wireless" translatable="false">This phone\'s installer did not keep the Google Play Store mark when the app asked for it. Second way: through the phone\'s own Wireless debugging the app opens the installer with more rights, and you confirm with Update. It needs Wi‑Fi (any network, internet is not required). Settings and sign‑in are kept.</string>
+    <string name="xf_fix_intro_other" translatable="false">The app could not fix its own install on this phone: the phone\'s installer did not take the request or did not keep the Google Play Store mark.</string>
+    <string name="xf_fix_other" translatable="false">Use an installer tool instead: uninstall xFermaTube, then install the APK through AAenabler, KingInstaller or UnknownAuto (open the tool and pick the APK from inside it). Then run the Android Auto install check in the settings again.</string>
+    <string name="xf_fix_use_simple" translatable="false">Try the simple way again</string>
+    <string name="xf_fix_use_wireless" translatable="false">Use Wireless debugging instead</string>
+    <string name="xf_fix_other_ways" translatable="false">Other ways to install</string>
+    <string name="xf_fix_step_allow" translatable="false">Allow xFermaTube to install apps (asked once)</string>
+    <string name="xf_fix_step_update" translatable="false">Tap Update in the phone\'s installer window</string>
+    <string name="xf_fix_step_reopen" translatable="false">Open xFermaTube again: it shows the result</string>
+    <string name="xf_fix_allow_off" translatable="false">The phone\'s installer takes the request only from an app that is allowed to install apps. Tap the button, turn on “Allow from this source” for xFermaTube, then come back here. It is used only to reinstall xFermaTube itself, and you can turn it off again afterwards.</string>
+    <string name="xf_fix_open_allow" translatable="false">Open the setting</string>
+    <string name="xf_fix_simple_ready" translatable="false">Tap the button, then Update in the window that opens. The app closes when it is replaced: tap Open in that window, or start xFermaTube again, and it shows the result.\n\nIf Google Play Protect asks about the app, let it scan or choose to install anyway.</string>
+    <string name="xf_fix_reinstall" translatable="false">Reinstall now</string>
+    <string name="xf_fix_simple_failed" translatable="false">The phone\'s installer could not be opened, or it refused the install. Copy the text below when you ask for help.</string>
     <string name="xf_fix_step_dev" translatable="false">Turn on Developer options</string>
     <string name="xf_fix_step_wifi" translatable="false">Turn on Wireless debugging (phone on Wi‑Fi)</string>
     <string name="xf_fix_step_pair" translatable="false">Pair: type the pairing code into the xFermaTube notification that pops up</string>
-    <string name="xf_fix_step_install" translatable="false">The app reinstalls itself and opens again</string>
+    <string name="xf_fix_step_install" translatable="false">Tap Update in the phone\'s installer window, then open xFermaTube again</string>
     <string name="xf_fix_dev_off" translatable="false">Developer options are off. Open About phone (on Samsung: About phone &gt; Software information), tap Build number 7 times, then come back here.</string>
     <string name="xf_fix_open_about" translatable="false">Open About phone</string>
     <string name="xf_fix_wifi_off" translatable="false">Wireless debugging is off. Open Developer options and turn on Wireless debugging (the phone must be connected to Wi‑Fi), then come back here.</string>
     <string name="xf_fix_open_dev" translatable="false">Open Developer options</string>
     <string name="xf_fix_notif_off" translatable="false">Notifications for xFermaTube are off. The pairing code is typed into a notification, so allow them first.</string>
     <string name="xf_fix_allow_notif" translatable="false">Allow notifications</string>
-    <string name="xf_fix_pair" translatable="false">Tap the button below. In Developer options tap Wireless debugging (the text, not the switch), then “Pair device with pairing code”.\n\nDon\'t come back to this screen: leaving Settings closes the pairing window. An xFermaTube notification pops up over it: type the 6‑digit code there. If you don\'t see it, pull the notifications down. The app then reinstalls itself and opens again.\n\nIf Settings is open next to the app (split screen), you can type the code here instead.</string>
+    <string name="xf_fix_pair" translatable="false">Tap the button below. In Developer options tap Wireless debugging (the text, not the switch), then “Pair device with pairing code”.\n\nDon\'t come back to this screen: leaving Settings closes the pairing window. An xFermaTube notification pops up over it: type the 6‑digit code there. If you don\'t see it, pull the notifications down. The phone\'s installer then opens: tap Update.\n\nIf Settings is open next to the app (split screen), you can type the code here instead.</string>
     <string name="xf_fix_code_hint" translatable="false">Pairing code</string>
     <string name="xf_fix_pair_btn" translatable="false">Pair</string>
     <string name="xf_fix_notif_found" translatable="false">Pairing window found. Type its 6‑digit code here.</string>
     <string name="xf_fix_wrong_code" translatable="false">That code was not accepted. Type the 6 digits shown in the pairing window.</string>
     <string name="xf_fix_pair_failed" translatable="false">Pairing failed. Keep the “Pair device with pairing code” window open while you type the code.</string>
     <string name="xf_fix_working" translatable="false">Working…</string>
-    <string name="xf_fix_installing" translatable="false">Reinstalling. The app closes and opens again in a few seconds. If the phone asks whether to allow the install, allow it.</string>
-    <string name="xf_fix_failed" translatable="false">The reinstall did not work. Copy the text below when you ask for help.</string>
-    <string name="xf_fix_failed_restricted" translatable="false">The phone blocked the install. On Xiaomi, Redmi and POCO turn on Developer options &gt; Install via USB, then try again.</string>
-    <string name="xf_fix_no_result" translatable="false">No result after 90 seconds. If the phone showed a question about the install, answer it, then try again.</string>
+    <string name="xf_fix_installing" translatable="false">The phone\'s installer was opened: tap Update there. The app closes when it is replaced: open xFermaTube again and it shows the result. If no window opened, tap Try again.</string>
+    <string name="xf_fix_failed" translatable="false">The phone\'s installer could not be opened. Copy the text below when you ask for help.</string>
+    <string name="xf_fix_failed_restricted" translatable="false">The phone blocked the request. On Xiaomi, Redmi and POCO turn on Developer options &gt; Install via USB and USB debugging (Security settings), then try again.</string>
     <string name="xf_fix_try_again" translatable="false">Try again</string>
-    <string name="xf_fix_ok" translatable="false">Nothing to fix: the install source is Google Play Store.</string>
-    <string name="xf_fix_unsupported" translatable="false">This phone has no Wireless debugging (it needs Android 11 or newer). Install from a PC instead:\nadb install -r -i com.android.vending xFermaTube.apk</string>
+    <string name="xf_fix_ok" translatable="false">Nothing to fix: the app is recorded as installed from Google Play Store by the phone\'s installer.</string>
     <string name="xf_fix_no_settings" translatable="false">This settings page cannot be opened here. Open it from the phone\'s Settings.</string>
     <string name="xf_fix_notif_title" translatable="false">xFermaTube: fix install source</string>
     <string name="xf_fix_notif_prompt" translatable="false">Type the 6‑digit pairing code here.</string>
     <string name="xf_fix_notif_hint" translatable="false">Pairing code</string>
-    <string name="xf_fix_notif_installing" translatable="false">Paired. Reinstalling the app…</string>
+    <string name="xf_fix_notif_installing" translatable="false">Paired. Tap Update in the installer window.</string>
     <string name="xf_history" translatable="false">History</string>
     <string name="engine_mp_name" translatable="false">MediaPlayer</string>
     <string name="engine_exo_name" translatable="false">ExoPlayer</string>
