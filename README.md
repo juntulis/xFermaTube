@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <b><a href="../../releases/tag/v1.0.3-beta.4">⬇ Download the APK (v1.0.3-beta.4)</a></b> · <a href="#install">Full install guide</a>
+  <b><a href="../../releases/latest">⬇ Download the APK (latest release)</a></b> · <a href="#install">Full install guide</a>
 </p>
 
 > [!IMPORTANT]
@@ -22,7 +22,7 @@
 > 6. **Do the one-time sync check (new in v1.0.3-beta.4).** The first time xFermaTube is open on the car screen, the phone offers it. Park, tap **Start**, point the phone's back camera at the car screen and hold still for about a minute. The car flashes and beeps, the phone measures the difference and fixes it. You do it once per connection type (USB / wireless). [More](#the-one-time-sync-check)
 > 7. **Sync is not instant.** After that, auto sync listens to each new video first: give it up to a minute before sound and picture line up.
 >
-> On v1.0.2 (the latest stable release) install through AAenabler instead: see the [install guide](#install).
+> Older versions (v1.0.2 and earlier) have no **Fix now**: install those through AAenabler, see the [install guide](#install).
 
 ---
 
@@ -70,7 +70,7 @@ Android Auto only shows video apps that look like they came from the Play Store.
 Since **v1.0.3-beta.3** the app fixes this itself. You install the APK the normal way, and the app then asks the phone's own installer to install it once more, marked as coming from Google Play. No helper app, PC or Wi‑Fi is needed. I tested it in my car with a Samsung phone on Android 17: after a plain install the video app was missing, and after **Fix now** it showed up.
 
 1. **Turn on Unknown sources in Android Auto.** On the phone: Android Auto settings → scroll down and tap **Version** 10 times → **⋮** (top right) → **Developer settings** → tick **Unknown sources**.
-2. **Download the APK** from the [v1.0.3-beta.4 release](../../releases/tag/v1.0.3-beta.4) (arm64 phones only) and open it to install. If Google Play Protect asks about the app, let it scan or choose to install anyway.
+2. **Download the APK** from the [latest release](../../releases/latest) (arm64 phones only) and open it to install. If Google Play Protect asks about the app, let it scan or choose to install anyway.
 3. **Open xFermaTube on the phone.** It says *Android Auto may hide the video app*. Tap **Fix now**, then:
    - **Open the setting** → turn on *Allow from this source* for xFermaTube → go back to the app. This is asked once.
    - **Reinstall now** → **Update** in the installer window.
@@ -82,7 +82,7 @@ Since **v1.0.3-beta.3** the app fixes this itself. You install the APK the norma
 
 To update, open the new APK over the old one. Your settings are kept. The app may ask for **Fix now** again after an update, because the update changes the install record: do it the same way.
 
-**With a helper app instead.** [AAenabler](https://github.com/malebuffy/AAEnabler) still works, and it is the way to install **v1.0.2** (the latest stable release) and older: open AAenabler and pick the APK from inside it, don't open the file directly. No **Fix now** is needed then. KingInstaller (the installer FermataX suggests, with Play Store as the install source) is an alternative I have not tested myself.
+**With a helper app instead.** [AAenabler](https://github.com/malebuffy/AAEnabler) still works, and it is the way to install **v1.0.2** and older: open AAenabler and pick the APK from inside it, don't open the file directly. No **Fix now** is needed then. KingInstaller (the installer FermataX suggests, with Play Store as the install source) is an alternative I have not tested myself.
 
 ### Two icons in Android Auto
 
