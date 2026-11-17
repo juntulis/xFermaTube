@@ -134,7 +134,14 @@ Auto sync measures the delay through the phone's microphone, and two things stay
 3. The car screen flashes white and beeps once a second. Point the phone's back camera at the car screen so it fills the middle of the picture, and keep the phone still: rest it against the steering wheel or the seat.
 4. The phone waits until auto sync has settled, then measures for 10 seconds: when the flash is seen and when the beep is heard. It fixes the difference, checks once more and says **Done**.
 
-It takes about a minute, and you do it once for USB and once for wireless if you use both. From then on auto sync keeps every video in sync by itself: in my car, after the check, the next videos synced within seconds and the lips matched. **Later** asks again on the next connection, **Don't ask again** turns the offer off. You can run it any time from Settings → *Sync sound and picture (camera)*, with the car connected.
+It takes about a minute, and you only do it once. If you connect both by cable and wirelessly, it asks once for each.
+
+After that you don't have to do anything: every new video syncs by itself. In my car, after the check, the next videos synced within seconds and the lips matched.
+
+- Not now? Tap **Later** and it asks again next time you connect.
+- Never want it? Tap **Don't ask again**.
+- Prefer to tune by ear? The **−10 / +10** buttons on the ⏱ label still work.
+- Want to redo it? Settings → **Sync sound and picture (camera)**, with the car connected.
 
 **Sync is not instant.** The app can't know the delay in advance: it has to hear the car's speakers through the phone's microphone and compare that with the video's soundtrack. For each new video it can take up to a minute before sound and picture line up. It can take longer when the audio is quiet, the car is noisy, or the music is very rhythmic. Until then the video uses the delay from the previous video. The sound must be audible in the cabin: with the volume at zero there is nothing to measure.
 
