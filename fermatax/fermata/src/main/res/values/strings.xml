@@ -17,10 +17,46 @@
 Android Auto cannot show this request on the car screen, so it is asked here.</string>
     <string name="xf_mic_allow" translatable="false">Allow</string>
     <string name="xf_mic_later" translatable="false">Not now</string>
+    <string name="xf_account_section" translatable="false">YouTube account</string>
+    <string name="xf_account_sign_in" translatable="false">Sign in to YouTube</string>
+    <string name="xf_account_switch" translatable="false">YouTube account</string>
+    <string name="xf_account_signed_in" translatable="false">Signed in. Videos play on the car screen only; the phone is for settings and signing in.</string>
+    <string name="xf_account_signed_out" translatable="false">Not signed in. Sign in here once: the car screen uses the same account. Videos play on the car screen only.</string>
+    <string name="xf_account_sign_out" translatable="false">Sign out</string>
+    <string name="xf_account_sign_out_sub" translatable="false">Signs YouTube out on the phone and on the car screen.</string>
+    <string name="xf_account_signed_in_done" translatable="false">Signed in to YouTube.</string>
+    <string name="xf_account_signed_out_done" translatable="false">Signed out of YouTube.</string>
+    <string name="xf_overlay_title" translatable="false">Keep the car picture moving</string>
+    <string name="xf_overlay_message" translatable="false">With the newer Android Auto, Samsung phones stop the car picture (the sound goes on) once xFermaTube has been opened on the phone and then left in the background.
+
+To prevent it, xFermaTube keeps a 1×1 pixel invisible window while the car screen is on. It does not cover anything and does not catch touches. Android calls this \"Display over other apps\" (Samsung: \"Appear on top\"). On the next screen find xFermaTube in the list and turn it on, then come back.</string>
+    <string name="xf_overlay_open" translatable="false">Open the setting</string>
+    <string name="xf_overlay_later" translatable="false">Not now</string>
+    <string name="xf_overlay_never" translatable="false">Don\'t ask again</string>
+    <string name="xf_overlay_pref" translatable="false">Keep the car picture moving</string>
+    <string name="xf_overlay_pref_on" translatable="false">On (\"Display over other apps\" is allowed).</string>
+    <string name="xf_overlay_pref_off" translatable="false">Off. Turn it on if the car picture freezes while the sound goes on: allow xFermaTube in \"Display over other apps\" (Samsung: \"Appear on top\").</string>
     <string name="xf_aa_check" translatable="false">Android Auto install check</string>
     <string name="xf_aa_check_sub" translatable="false">Shows how the app was installed. Use it when Android Auto shows only the audio entry.</string>
     <string name="xf_share" translatable="false">Share</string>
     <string name="xf_close" translatable="false">Close</string>
+    <string name="xf_sync_section" translatable="false">Sound and picture sync</string>
+    <string name="xf_install_section" translatable="false">Install and updates</string>
+    <string name="xf_update_check" translatable="false">Check for updates</string>
+    <string name="xf_update_check_sub" translatable="false">Once a day, when the app is opened on the phone, asks GitHub if a newer xFermaTube is out. Nothing is sent except the request itself.</string>
+    <string name="xf_update_check_now" translatable="false">Check for updates now</string>
+    <string name="xf_update_check_now_sub" translatable="false">This is version %1$s.</string>
+    <string name="xf_update_checking" translatable="false">Checking for updates…</string>
+    <string name="xf_update_none" translatable="false">You have the latest version (%1$s).</string>
+    <string name="xf_update_failed" translatable="false">Update check failed (%1$s).</string>
+    <string name="xf_update_title" translatable="false">xFermaTube %1$s is out</string>
+    <string name="xf_update_message" translatable="false">You have %1$s. Download and install the new version now? Your settings and sign‑in are kept.\n\nThe phone\'s installer asks you to confirm with Update. If the video app ever disappears from the car screen afterwards, open the app and tap Fix now.</string>
+    <string name="xf_update_now" translatable="false">Update</string>
+    <string name="xf_update_skip" translatable="false">Skip this version</string>
+    <string name="xf_update_downloading" translatable="false">Downloading the update…</string>
+    <string name="xf_update_allow_title" translatable="false">Allow installing the update</string>
+    <string name="xf_update_allow" translatable="false">To install the update, xFermaTube needs permission to install apps. Tap Open the setting, turn on Allow from this source, go back and tap Update again (Settings → Check for updates now).</string>
+    <string name="xf_update_open_setting" translatable="false">Open the setting</string>
     <string name="xf_fix_title" translatable="false">Fix install source</string>
     <string name="xf_fix_sub" translatable="false">Reinstalls the app as coming from Google Play Store, so that Android Auto shows the video app.</string>
     <string name="xf_fix_now" translatable="false">Fix now</string>

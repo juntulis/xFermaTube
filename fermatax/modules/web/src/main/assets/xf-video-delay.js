@@ -27,7 +27,7 @@
   var shown = null;          // paskutinis nupieštas kadras
   var capturing = false, vfcId = 0, rafId = 0, hideTimer = 0, redraw = false;
   var gen = 0;               // didinamas po flush: vėluojantys createImageBitmap rezultatai atmetami
-  var pending = 0, lastT = 0;
+  var pending = 0, lastT = 0, pendingAt = 0, pgen = 0, lastVfcAt = 0;
   var geom = null, geomKey = '', geomAt = 0, capW = MAX_W, opacity = '';
   // Diagnostika: per paskutinę sekundę
   var st = { cap: 0, drawn: 0, skip: 0, bmpMs: 0 }, stats = { capFps: 0, drawFps: 0, skip: 0, bmpMs: 0 }, statsAt = 0;
@@ -977,19 +977,27 @@
 
   function onFrame(now, meta) {
     if (!capturing || !video) return;
+    lastVfcAt = performance.now();
     vfcId = video.requestVideoFrameCallback(onFrame);
     if (delayMs <= 0 || !video.videoWidth) return;
+    var nowMs = performance.now();
+    // Užstrigęs createImageBitmap (negrįžta) neturi amžinai blokuoti gaudymo
+    if (pending >= MAX_PENDING && nowMs - pendingAt > 2000) { pending = 0; pgen++; }
     if (pending >= MAX_PENDING) { st.skip++; return; }   // telefonas nespėja: nekaupiam eilės
     var w = Math.min(video.videoWidth, capW);
     var h = Math.round(video.videoHeight * w / video.videoWidth);
     // Laikas, kada kadras turėjo pasirodyti ekrane (tolygus tempas), o ne kada suveikė callback'as.
-    var t = (meta && meta.expectedDisplayTime) || now || performance.now();
+    var t = (meta && meta.expectedDisplayTime) || now || nowMs;
+    // Naujesnio Android Auto lange laikas gali būti klaidingas: kadras „iš ateities“ užkimšdavo eilę
+    // ir visi vėlesni būdavo atmetami (t <= lastT), vaizdas sustingdavo iki prasukimo.
+    if (!(t > nowMs - 1000 && t < nowMs + 1000)) t = nowMs;
     var mt = meta ? meta.mediaTime : video.currentTime;
-    var g0 = gen, t0 = performance.now();
+    var g0 = gen, t0 = nowMs, pg = pgen;
+    if (pending === 0) pendingAt = nowMs;
     pending++;
     createImageBitmap(video, { resizeWidth: w, resizeHeight: h, resizeQuality: 'low' })
       .then(function (bmp) {
-        pending--;
+        if (pg === pgen) { pending--; pendingAt = performance.now(); }
         st.bmpMs += performance.now() - t0;
         // Pasenęs (po seek) ar ne iš eilės grįžęs kadras: išmetam, kad vaizdas nešokinėtų atgal.
         if (!capturing || g0 !== gen || t <= lastT) { bmp.close(); return; }
@@ -997,7 +1005,7 @@
         st.cap++;
         queue.push({ bmp: bmp, t: t, mt: mt });
         while (queue.length > MAX_FRAMES) queue.shift().bmp.close();
-      }, function () { pending--; });
+      }, function () { if (pg === pgen) { pending--; pendingAt = performance.now(); } });
   }
 
   function tickStats(now) {
@@ -1016,6 +1024,13 @@
     rafId = requestAnimationFrame(draw);
     if (!video || !canvas) return;
     now = now || performance.now();
+    // Grojant kadrų callback'ai nutrūko (be jų vaizdas stovi): registruojam iš naujo
+    var pnow = performance.now();
+    if (capturing && !video.paused && (video.readyState >= 3) && pnow - lastVfcAt > 1500) {
+      try { video.cancelVideoFrameCallback(vfcId); } catch (e) {}
+      vfcId = video.requestVideoFrameCallback(onFrame);
+      lastVfcAt = pnow;
+    }
     tickStats(now);
     updateGeom(now);
     if (!geom) return;
@@ -1051,6 +1066,7 @@
     capturing = true;
     canvas.style.display = 'block';
     geomAt = 0; geomKey = '';
+    lastVfcAt = performance.now();
     vfcId = video.requestVideoFrameCallback(onFrame);
     rafId = requestAnimationFrame(draw);
   }

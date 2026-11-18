@@ -286,8 +286,12 @@ public class MainActivityDelegate extends ActivityDelegate
 		init();
 
 		AddonManager.get().onActivityCreate(this);
-		// One question per start: the install source first, the microphone on the next start
-		if (!me.aap.fermata.xf.XfInstallFix.checkAtStartup(this)) xfAskMicrophoneOnPhone();
+		// One question per start: the install source first, then keeping the car picture moving,
+		// then the microphone, then updates
+		if (!me.aap.fermata.xf.XfInstallFix.checkAtStartup(this) &&
+				!me.aap.fermata.xf.XfKeepDrawing.checkAtStartup(this) && !xfAskMicrophoneOnPhone()) {
+			me.aap.fermata.xf.XfUpdate.checkAtStartup(this);
+		}
 
 		// Permissions are requested by the feature that needs them. In particular, an Android
 		// Auto activity must never try to launch a phone runtime-permission dialog at startup.
@@ -377,6 +381,8 @@ public class MainActivityDelegate extends ActivityDelegate
 					return completed(true);
 				}
 			} else if (Intent.ACTION_VIEW.equals(intent.getAction())) {
+				// xFermaTube: videos play only on the car screen, never on the phone
+				if (me.aap.fermata.xf.XfConfig.YOUTUBE_ONLY && !isCarActivity()) return completed(false);
 				PlayableItem i = new IntentPlayable(this, u);
 				getBody().playItem(i);
 			}
@@ -403,11 +409,11 @@ public class MainActivityDelegate extends ActivityDelegate
 	 * show a runtime-permission dialog, so the permission is explained and requested once when the
 	 * app is opened on the phone. Never runs on the car screen.
 	 */
-	private void xfAskMicrophoneOnPhone() {
-		if (!me.aap.fermata.xf.XfConfig.YOUTUBE_ONLY || isCarActivity()) return;
-		if (getPrefs().getBooleanPref(MainActivityPrefs.XF_MIC_ASKED)) return;
+	private boolean xfAskMicrophoneOnPhone() {
+		if (!me.aap.fermata.xf.XfConfig.YOUTUBE_ONLY || isCarActivity()) return false;
+		if (getPrefs().getBooleanPref(MainActivityPrefs.XF_MIC_ASKED)) return false;
 		if (androidx.core.content.ContextCompat.checkSelfPermission(getContext(), permission.RECORD_AUDIO) ==
-				PERMISSION_GRANTED) return;
+				PERMISSION_GRANTED) return false;
 		getHandler().post(() -> {
 			try {
 				createDialogBuilder()
@@ -424,6 +430,7 @@ public class MainActivityDelegate extends ActivityDelegate
 				Log.e(ex, "Failed to show the microphone dialog");
 			}
 		});
+		return true;
 	}
 
 	public void showPrimaryRoot() {
@@ -444,6 +451,13 @@ public class MainActivityDelegate extends ActivityDelegate
 		AddonManager mgr = FermataApplication.get().getAddonManager();
 		AddonInfo yt = mgr.getAddonInfo(R.id.youtube_fragment);
 		if (yt != null) mgr.ensureEnabled(yt);
+		// xFermaTube: videos play only on the car screen. The phone shows the settings, and the
+		// YouTube page only for signing in (YoutubeFragment).
+		if (!isCarActivity()) {
+			setActiveNavItemId(R.id.settings_fragment);
+			showFragmentWhenReady(R.id.settings_fragment);
+			return;
+		}
 		showFragmentWhenReady(R.id.youtube_fragment);
 	}
 
@@ -871,8 +885,13 @@ public class MainActivityDelegate extends ActivityDelegate
 	}
 
 	public void keepScreenOn(boolean on) {
-		if (on) getWindow().addFlags(FLAG_KEEP_SCREEN_ON);
-		else getWindow().clearFlags(FLAG_KEEP_SCREEN_ON);
+		// xFermaTube: the newer Android Auto car window may not support window calls
+		try {
+			if (on) getWindow().addFlags(FLAG_KEEP_SCREEN_ON);
+			else getWindow().clearFlags(FLAG_KEEP_SCREEN_ON);
+		} catch (RuntimeException ex) {
+			Log.w(ex, "keepScreenOn is not supported by this window");
+		}
 	}
 
 	public int getBrightness() {

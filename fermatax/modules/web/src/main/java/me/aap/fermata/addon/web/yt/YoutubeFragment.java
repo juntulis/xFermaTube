@@ -123,6 +123,13 @@ public class YoutubeFragment extends WebBrowserFragment
 			YoutubeChromeClient chromeClient = new YoutubeChromeClient(webView, videoView);
 			webView.init(addon, webClient, chromeClient);
 			registerListeners(a);
+			// xFermaTube: on the phone this page is only for signing in, videos play in the car
+			if (!a.isCarActivity()) {
+				runWhenMeasured(webView, () -> {
+					if (isAdded()) webView.loadUrl(me.aap.fermata.xf.XfAccount.SIGN_IN_URL);
+				});
+				return;
+			}
 			boolean directPlayback = webView.consumeInitialPlaybackNavigationClaim();
 			YoutubeAddon.SessionReturnAction returnAction =
 					addon.consumeEntry(a, System.currentTimeMillis(), directPlayback,
@@ -239,6 +246,12 @@ public class YoutubeFragment extends WebBrowserFragment
 		super.onHiddenChanged(hidden);
 		YoutubeWebView view = getWebView();
 		if (view == null) return;
+		// xFermaTube: on the phone the page is only for signing in; each time it is shown again,
+		// it starts from the sign-in page, not from the page where the last sign-in stopped
+		if (!hidden && !MainActivityDelegate.get(view.getContext()).isCarActivity()) {
+			view.loadUrl(me.aap.fermata.xf.XfAccount.SIGN_IN_URL);
+			return;
+		}
 		if (hidden) {
 			YoutubeAddon addon = AddonManager.get().getAddon(YoutubeAddon.class);
 			if (addon != null) addon.markSessionInactive(System.currentTimeMillis());

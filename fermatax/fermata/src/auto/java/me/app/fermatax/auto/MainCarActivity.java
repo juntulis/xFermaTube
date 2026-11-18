@@ -208,11 +208,16 @@ public class MainCarActivity extends CarActivity implements FermataActivity {
 	private void completeStartup(Bundle state, long generation, Promise<MainActivityDelegate> promise,
 			FermataMediaServiceConnection connection, Throwable failure) {
 		if (failure != null) {
+			me.aap.fermata.xf.XfInstallReport.recordCarStartupError(getContext(), failure);
 			DiagnosticsObserver.startupDetail(DiagnosticsObserver.StartupEvent.UI_FAILED,
 					generation, 0L, 0);
 			STARTUP.uiFailed(generation);
 			if (!destroyed && STARTUP.isCurrent(generation)) {
-				showAlert(getContext(), String.valueOf(failure));
+				try {
+					showAlert(getContext(), String.valueOf(failure));
+				} catch (Throwable alertError) {
+					Log.e(alertError, "Failed to show the AA startup error");
+				}
 			}
 			promise.completeExceptionally(failure);
 			return;
@@ -243,6 +248,7 @@ public class MainCarActivity extends CarActivity implements FermataActivity {
 			DiagnosticsObserver.startupDetail(DiagnosticsObserver.StartupEvent.UI_FAILED,
 					generation, 0L, 0);
 			Log.e(error, "Direct AA startup failed while attaching UI");
+			me.aap.fermata.xf.XfInstallReport.recordCarStartupError(getContext(), error);
 			if (d != null) {
 				try {
 					d.onActivityDestroy();
@@ -257,7 +263,12 @@ public class MainCarActivity extends CarActivity implements FermataActivity {
 			STARTUP.uiFailed(generation);
 			promise.completeExceptionally(error);
 			if (!destroyed && STARTUP.isCurrent(generation)) {
-				showAlert(getContext(), String.valueOf(error));
+				// xFermaTube: the alert needs the delegate cleared above and threw, hiding this error
+				try {
+					showAlert(getContext(), String.valueOf(error));
+				} catch (Throwable alertError) {
+					Log.e(alertError, "Failed to show the AA startup error");
+				}
 			}
 		}
 	}
@@ -278,6 +289,8 @@ public class MainCarActivity extends CarActivity implements FermataActivity {
 
 	@Override
 	public void onStart() {
+		// Samsung stops drawing the car screen once the phone app was left in the background
+		me.aap.fermata.xf.XfKeepDrawing.start(getContext());
 		super.onStart();
 		MainActivityDelegate d = createdDelegate;
 		if (d != null) d.onHostForegrounded();
@@ -313,7 +326,10 @@ public class MainCarActivity extends CarActivity implements FermataActivity {
 		AutomotiveNavigationController.get().unregister(phoneNavigator);
 		AutomotiveConnectionState.get().appVisibilityChanged(controlVisibilityOwner, false);
 		destroyed = true;
-		if (currentInstance == this) currentInstance = null;
+		if (currentInstance == this) {
+			currentInstance = null;
+			me.aap.fermata.xf.XfKeepDrawing.stop(getContext());
+		}
 		DiagnosticsObserver.activity(DiagnosticsObserver.ActivityEvent.DESTROYED, diagnosticsActivityId);
 		super.onDestroy();
 		MainActivityDelegate d = createdDelegate;

@@ -127,7 +127,10 @@ public class ToolBarView extends ConstraintLayout implements ActivityListener,
 	}
 
 	public ActivityFragment getActiveFragment() {
-		return getActivity().getActiveFragment();
+		// xFermaTube: a posted refresh can run after a failed or closed car screen. Its context then
+		// has no activity; return no fragment instead of crashing the whole app.
+		ActivityDelegate a = ActivityDelegate.getActivityDelegate(getContext()).peek();
+		return (a == null) ? null : a.getActiveFragment();
 	}
 
 	/** Restores the visibility requested by the active fragment's mediator. */

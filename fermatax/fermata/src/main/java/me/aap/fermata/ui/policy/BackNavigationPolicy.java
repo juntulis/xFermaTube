@@ -83,16 +83,17 @@ public final class BackNavigationPolicy {
 
 		ActivityFragment f = a.getActiveFragment();
 		if ((f != null) && f.onBackPressed()) return;
-		// xFermata: YouTube yra vienintelis šakninis ekranas, todėl „Atgal“ jame uždaro programą.
-		if (me.aap.fermata.xf.XfConfig.YOUTUBE_ONLY && (f != null) &&
+		// xFermata: automobilyje YouTube yra vienintelis šakninis ekranas, todėl „Atgal“ jame uždaro programą.
+		if (me.aap.fermata.xf.XfConfig.YOUTUBE_ONLY && (f != null) && a.isCarActivity() &&
 				(f.getFragmentId() == R.id.youtube_fragment)) {
 			a.finish();
 			return;
 		}
-		// xFermaTube telefone: iš bet kurio kito puslapio (nustatymų) „Atgal“ grįžta į YouTube.
-		// Be šito telefono šaknų logika nustatymus laikė šakniniu puslapiu ir grįžti nebuvo kaip.
+		// xFermaTube telefone: šaknis yra nustatymai (video telefone nerodomi), iš jų „Atgal“ uždaro
+		// programą, o iš kitų puslapių (YouTube prisijungimo) grįžta į nustatymus.
 		if (me.aap.fermata.xf.XfConfig.YOUTUBE_ONLY && (f != null) && !a.isCarActivity()) {
-			a.showPrimaryRoot();
+			if (f.getFragmentId() == R.id.settings_fragment) a.finish();
+			else a.showPrimaryRoot();
 			return;
 		}
 		boolean phoneRoots = PhoneRootPolicy.usesPhoneRoots(a.getRuntimeHostMode());

@@ -87,6 +87,9 @@ public class FermataToolBarView extends ToolBarView {
 	}
 
 	private void refreshCanonicalTopBar() {
+		// xFermaTube: the posted refresh can run after the car screen was closed or recreated. Its context
+		// then has no activity, and getActiveFragment() threw IllegalArgumentException, crashing the app.
+		if (ActivityDelegate.getActivityDelegate(getContext()).peek() == null) return;
 		ActivityFragment fragment = getActiveFragment();
 		Mediator mediator = getMediator();
 		if ((fragment == null) || (mediator == null)) return;

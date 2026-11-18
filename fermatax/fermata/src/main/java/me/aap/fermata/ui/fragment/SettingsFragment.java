@@ -190,6 +190,7 @@ public class SettingsFragment extends MainActivityFragment
 	public void onResume() {
 		super.onResume();
 		if (readinessPrefsBuilder != null) readinessPrefsBuilder.refresh();
+		xfRefreshAccount();
 		refreshAppearance();
 	}
 
@@ -198,8 +199,28 @@ public class SettingsFragment extends MainActivityFragment
 		super.onHiddenChanged(hidden);
 		if (!hidden) {
 			if (readinessPrefsBuilder != null) readinessPrefsBuilder.refresh();
+			xfRefreshAccount();
 			refreshAppearance();
 		}
+	}
+
+	// xFermaTube: after signing in or out on the phone the account rows must change
+	private boolean xfSignedIn;
+
+	private void xfRefreshAccount() {
+		MainActivityDelegate a = activityDelegate;
+		View view = getView();
+		if (!me.aap.fermata.xf.XfConfig.YOUTUBE_ONLY || (a == null) || a.isCarActivity() ||
+				(view == null) || (adapter == null) || !isRootPage()) return;
+		if (me.aap.fermata.xf.XfAccount.signedIn() == xfSignedIn) return;
+		RecyclerView listView = view.findViewById(me.aap.utils.R.id.prefs_list_view);
+		if (listView == null) return;
+		for (AddonPrefsBuilder builder : addonPrefsBuilders) builder.close();
+		addonPrefsBuilders.clear();
+		PreferenceViewAdapter old = adapter;
+		adapter = createAdapter(a);
+		listView.setAdapter(adapter);
+		old.onDestroy();
 	}
 
 	@Override
@@ -323,6 +344,31 @@ public class SettingsFragment extends MainActivityFragment
 		MediaLibPrefs mediaPrefs = a.getMediaServiceBinder().getLib().getPrefs();
 		PreferenceSet set = new PreferenceSet();
 		Context ctx = a.getContext();
+
+		// xFermaTube: telefone video nerodomi, todėl YouTube čia tik prisijungimui (slapukai bendri su automobiliu)
+		if (me.aap.fermata.xf.XfConfig.YOUTUBE_ONLY && !a.isCarActivity()) {
+			addSectionHeader(set, ctx, R.string.xf_account_section);
+			boolean signedIn = me.aap.fermata.xf.XfAccount.signedIn();
+			xfSignedIn = signedIn;
+			set.addButton(o -> {
+				o.title = signedIn ? R.string.xf_account_switch : R.string.xf_account_sign_in;
+				o.subtitle = signedIn ? R.string.xf_account_signed_in : R.string.xf_account_signed_out;
+				o.onClick = () -> me.aap.fermata.xf.XfAccount.signIn(a);
+			});
+			if (signedIn) set.addButton(o -> {
+				o.title = R.string.xf_account_sign_out;
+				o.subtitle = R.string.xf_account_sign_out_sub;
+				o.onClick = () -> me.aap.fermata.xf.XfAccount.signOut(a);
+			});
+		}
+
+		// xFermaTube: garso ir vaizdo sinchronizacija pirma, kad kameros testą būtų lengva rasti
+		if (me.aap.fermata.xf.XfConfig.YOUTUBE_ONLY && (FermataApplication.get().getAddonManager()
+				.getAddon(me.aap.fermata.xf.XfConfig.YOUTUBE_ADDON_CLASS) instanceof
+				me.aap.fermata.xf.XfSyncSettings sync)) {
+			addSectionHeader(set, ctx, R.string.xf_sync_section);
+			sync.xfContributeSyncSettings(ctx, set, a);
+		}
 
 		addSectionHeader(set, ctx, R.string.interface_prefs);
 		InterfacePrefsBuilder.add(a, set);
@@ -509,14 +555,26 @@ public class SettingsFragment extends MainActivityFragment
 			PreferenceSet sub = set.subSet(b);
 			sub.configure(b::configure);
 		}
-		addSectionHeader(set, ctx, R.string.about_support);
-		set.addButton(o -> {
-			o.title = R.string.app_version;
-			o.csubtitle = "xFermaTube " + me.aap.fermata.xf.XfConfig.RELEASE + " (FermataX " +
-					BuildConfig.VERSION_NAME + " / " + BuildConfig.VERSION_CODE + ")";
-		});
-		// Tik telefone: ataskaitą reikia nukopijuoti ar persiųsti, o automobilio ekrane to nepadarysi.
+		// Tik telefone: atnaujinti ir diegimą taisyti galima tik telefone, ataskaitą reikia nukopijuoti
 		if (!a.isCarActivity()) {
+			addSectionHeader(set, ctx, R.string.xf_install_section);
+			set.addBooleanPref(o -> {
+				o.store = a.getPrefs();
+				o.pref = MainActivityPrefs.XF_UPDATE_CHECK;
+				o.title = R.string.xf_update_check;
+				o.subtitle = R.string.xf_update_check_sub;
+			});
+			set.addButton(o -> {
+				o.title = R.string.xf_update_check_now;
+				o.csubtitle = ctx.getString(R.string.xf_update_check_now_sub, me.aap.fermata.xf.XfConfig.RELEASE);
+				o.onClick = () -> me.aap.fermata.xf.XfUpdate.checkNow(a);
+			});
+			set.addButton(o -> {
+				boolean on = me.aap.fermata.xf.XfKeepDrawing.allowed(ctx);
+				o.title = R.string.xf_overlay_pref;
+				o.subtitle = on ? R.string.xf_overlay_pref_on : R.string.xf_overlay_pref_off;
+				o.onClick = () -> me.aap.fermata.xf.XfKeepDrawing.open(ctx);
+			});
 			set.addButton(o -> {
 				o.title = R.string.xf_aa_check;
 				o.subtitle = R.string.xf_aa_check_sub;
@@ -531,6 +589,18 @@ public class SettingsFragment extends MainActivityFragment
 				});
 			}
 		}
+		addSectionHeader(set, ctx, R.string.about_support);
+		set.addButton(o -> {
+			o.title = R.string.app_version;
+			o.csubtitle = "xFermaTube " + me.aap.fermata.xf.XfConfig.RELEASE + " (FermataX " +
+					BuildConfig.VERSION_NAME + " / " + BuildConfig.VERSION_CODE + ")";
+		});
+		set.addButton(o -> {
+			o.title = R.string.support_kofi_title;
+			o.subtitle = R.string.support_kofi_sub;
+			o.icon = R.drawable.coffee;
+			o.onClick = () -> Utils.openUrl(ctx, "https://ko-fi.com/namele55");
+		});
 	}
 
 	/** The Readiness Phone Apps row opens the page; Back then returns to Addons. */

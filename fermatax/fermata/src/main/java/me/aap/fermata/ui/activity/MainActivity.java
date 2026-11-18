@@ -66,8 +66,19 @@ public class MainActivity extends SplitCompatActivityBase
 		}
 
 		return FermataMediaServiceConnection.connect(a).map(c -> {
-			assert service == null;
-			service = c;
+			// xFermaTube: the phone activity may be started twice in a row (launcher, then again);
+			// the first one's connection may already be here. Keep one connection, do not fail.
+			FermataMediaServiceConnection prev = service;
+			FermataMediaServiceConnection use = c;
+			if ((prev != null) && (prev != c)) {
+				if (prev.isConnected()) {
+					c.disconnect();
+					use = prev;
+				} else {
+					prev.disconnect();
+				}
+			}
+			service = use;
 			return new MainActivityDelegate(a, service.createBinder());
 		}).onFailure(err -> showAlert(getContext(), String.valueOf(err)));
 	}

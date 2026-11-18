@@ -28,9 +28,39 @@ public class YoutubeWebClient extends FermataWebClient {
 		return new YoutubeWebClient(getDiagnosticsObserver());
 	}
 
+	/** Google's own pages (sign-in steps, consent, country domains like google.lt). */
+	private static boolean xfGoogleHost(String host) {
+		if (host == null) return false;
+		host = host.toLowerCase(java.util.Locale.ROOT);
+		return host.matches("(.+\\.)?google\\.[a-z]{2,3}(\\.[a-z]{2})?");
+	}
+
+	private static boolean xfOnPhone(WebView view) {
+		try {
+			return !MainActivityDelegate.get(view.getContext()).isCarActivity();
+		} catch (RuntimeException ex) {
+			return false;
+		}
+	}
+
 	@Override
 	public void onPageStarted(WebView view, String url, Bitmap favicon) {
-		MainActivityDelegate.get(view.getContext()).clearVoiceSelection();
+		// xFermaTube: the page can start loading after a failed or closed car screen
+		MainActivityDelegate a = null;
+		try {
+			a = MainActivityDelegate.get(view.getContext());
+			a.clearVoiceSelection();
+		} catch (RuntimeException ex) {
+			android.util.Log.w("xfWeb", "onPageStarted without an activity: " + ex);
+		}
+		// xFermaTube: on the phone the YouTube page is only for signing in. Once Google is back on
+		// YouTube, the sign-in is over: no YouTube page or video is shown on the phone.
+		if ((a != null) && !a.isCarActivity() && !me.aap.fermata.xf.XfAccount.isSignInPage(url)) {
+			view.stopLoading();
+			MainActivityDelegate act = a;
+			view.post(() -> me.aap.fermata.xf.XfAccount.signInFinished(act));
+			return;
+		}
 		if (view instanceof YoutubeWebView youtube) {
 			youtube.onMainFramePageStarted();
 			youtube.syncYoutubeTheme(youtube.isDarkTheme());
@@ -53,6 +83,10 @@ public class YoutubeWebClient extends FermataWebClient {
 		// xFermata: Google prisijungimas lieka YouTube lange, kad po jo grįžtų tiesiai į YouTube
 		// (slapukai bendri telefonui ir automobiliui: prisijungus telefone, prisijungta ir mašinoje).
 		if (isGoogleSignIn(request.getUrl().getHost())) return false;
+		// xFermaTube: on the phone this page is only for signing in; other links (help, terms) are
+		// not followed, so that no other page or video can be opened on the phone from here
+		if (!isYoutubeUri(request.getUrl()) && !xfGoogleHost(request.getUrl().getHost()) && xfOnPhone(view))
+			return true;
 		if (!isYoutubeUri(request.getUrl())) {
 			MainActivityDelegate a = MainActivityDelegate.get(view.getContext());
 

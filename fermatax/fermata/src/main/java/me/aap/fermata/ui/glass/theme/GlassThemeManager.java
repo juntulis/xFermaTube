@@ -48,19 +48,27 @@ public final class GlassThemeManager {
 
         // 3. Window decor, background, and system status/nav bars
         Window window = activity.getAppActivity().getWindow();
+        // xFermaTube: the newer Android Auto car window (ScvhWindow) throws UnsupportedOperationException
+        // for setBackgroundDrawable and similar calls, which stopped the car screen from starting.
         if (window != null) {
-            window.setBackgroundDrawable(new ColorDrawable(isNight ? 0xFF07090D : 0xFFF8FAFC));
-            window.setStatusBarColor(isNight ? 0xFF0E141D : 0xFFE2E8F0);
-            window.setNavigationBarColor(isNight ? 0xFF0E141D : 0xFFFFFFFF);
+            try {
+                window.setBackgroundDrawable(new ColorDrawable(isNight ? 0xFF07090D : 0xFFF8FAFC));
+            } catch (RuntimeException ignored) {}
+            try {
+                window.setStatusBarColor(isNight ? 0xFF0E141D : 0xFFE2E8F0);
+                window.setNavigationBarColor(isNight ? 0xFF0E141D : 0xFFFFFFFF);
+            } catch (RuntimeException ignored) {}
 
-            View decor = window.getDecorView();
-            if (decor != null) {
-                WindowInsetsControllerCompat controller = WindowCompat.getInsetsController(window, decor);
-                if (controller != null) {
-                    controller.setAppearanceLightStatusBars(!isNight);
-                    controller.setAppearanceLightNavigationBars(!isNight);
+            try {
+                View decor = window.getDecorView();
+                if (decor != null) {
+                    WindowInsetsControllerCompat controller = WindowCompat.getInsetsController(window, decor);
+                    if (controller != null) {
+                        controller.setAppearanceLightStatusBars(!isNight);
+                        controller.setAppearanceLightNavigationBars(!isNight);
+                    }
                 }
-            }
+            } catch (RuntimeException ignored) {}
         }
 
         // 4. Toolbar

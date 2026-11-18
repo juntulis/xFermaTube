@@ -60,7 +60,7 @@ import me.aap.utils.vfs.generic.GenericFileSystem;
 @Keep
 @SuppressWarnings("unused")
 public class YoutubeAddon extends WebBrowserAddon
-		implements PreferenceStore.Listener, MediaItemResolverAddon {
+		implements PreferenceStore.Listener, MediaItemResolverAddon, me.aap.fermata.xf.XfSyncSettings {
 	@NonNull
 	private static final AddonInfo info = FermataAddon.findAddonInfo(YoutubeAddon.class.getName());
 	public static final int YT_DARK_MODE_DISABLED = 0;
@@ -89,7 +89,6 @@ public class YoutubeAddon extends WebBrowserAddon
 	// xFermaTube: telefono kameros matavimo rezultatas automobilio WebView'ui („ms@laikas“, kad kiekvienas
 	// matavimas būtų naujas pokytis). Automobilio WebView jį pritaiko vieną kartą ir išvalo.
 	private static final Pref<Supplier<String>> XF_CAM_CORR = Pref.s("XF_CAM_CORR", "");
-	private static final Pref<BooleanSupplier> XF_AUTO_OPEN_ON_CAR = Pref.b("XF_AUTO_OPEN_ON_CAR", true);
 	// xFermaTube: kuriems ryšiams (usb, wifi) vienkartinis kameros vedlys jau atliktas; „never“ – nebeklausti.
 	private static final Pref<Supplier<String>> XF_CAL_DONE = Pref.s("XF_CAL_DONE", "");
 	private static final Pref<Supplier<String>> YT_ITEM_HISTORY = Pref.s("YT_ITEM_HISTORY", "");
@@ -155,7 +154,7 @@ public class YoutubeAddon extends WebBrowserAddon
 				.remove("YT_RESUME_VIDEO_ID")
 				.apply();
 		reconcilePinnedItems();
-		if (AUTO) xfInstallAutoOpenOnCar();
+		if (AUTO) xfKeepOpenOnCarOff();
 		xfInstallCalibrationOffer();
 	}
 
@@ -274,38 +273,18 @@ public class YoutubeAddon extends WebBrowserAddon
 		}
 	}
 
-	// ---- xFermaTube: „Open on car“ įjungiamas pats ----
-	// Upstream jungiklį kiekvienam prisijungimui išjungia, ir jį reikia rasti bei įjungti ranka, kitaip telefone
-	// paspaustas video groja telefone. Čia jis įjungiamas pats, kai automobilyje atidaryta programa; jei per tą
-	// prisijungimą vartotojas jį išjungė ranka, iki kito prisijungimo nebeįjungiamas.
-	private boolean xfOocAvailable, xfOocEnabled;
-	private long xfOocEpoch = -1, xfOocOffEpoch = -1;
-
-	private void xfInstallAutoOpenOnCar() {
-		me.aap.fermata.auto.AutomotiveNavigationController nav =
-				me.aap.fermata.auto.AutomotiveNavigationController.get();
-		me.aap.fermata.auto.OpenOnCarMode mode = nav.getOpenOnCarMode();
+	// ---- xFermaTube: „Open on car“ visada išjungtas ----
+	// Video groja tik automobilyje, telefone rodomi tik nustatymai ir prisijungimas, todėl telefono
+	// paspaudimų perkėlimas į automobilį nereikalingas.
+	private void xfKeepOpenOnCarOff() {
+		me.aap.fermata.auto.OpenOnCarMode mode =
+				me.aap.fermata.auto.AutomotiveNavigationController.get().getOpenOnCarMode();
 		android.os.Handler h = new android.os.Handler(android.os.Looper.getMainLooper());
-		mode.addListener((available, enabled, revision) -> h.post(() -> xfOnOpenOnCarChanged(nav, mode)));
-	}
-
-	private void xfOnOpenOnCarChanged(me.aap.fermata.auto.AutomotiveNavigationController nav,
-			me.aap.fermata.auto.OpenOnCarMode mode) {
-		boolean available = mode.isAvailable(), enabled = mode.isEnabled();
-		long epoch = nav.captureSourceToken(0).connectionEpoch();
-		// Tas pats prisijungimas, programa automobilyje matoma, o jungiklis ką tik išjungtas – tai vartotojas.
-		if ((epoch == xfOocEpoch) && xfOocAvailable && available && xfOocEnabled && !enabled) {
-			xfOocOffEpoch = epoch;
-			Log.i("xF: open on car turned off by user for this connection");
-		}
-		xfOocAvailable = available;
-		xfOocEnabled = enabled;
-		xfOocEpoch = epoch;
-		if (available && !enabled && (epoch != xfOocOffEpoch) &&
-				getPreferenceStore().getBooleanPref(XF_AUTO_OPEN_ON_CAR)) {
-			Log.i("xF: enabling open on car automatically");
-			mode.setEnabled(true);
-		}
+		mode.addListener((available, enabled, revision) -> {
+			if (enabled) h.post(() -> {
+				if (mode.isEnabled()) mode.setEnabled(false);
+			});
+		});
 	}
 
 	@IdRes
@@ -348,6 +327,25 @@ public class YoutubeAddon extends WebBrowserAddon
 		return AUTO && prefs.contains(YT_SKIP_ADD);
 	}
 
+	/** xFermaTube: the sync rows, shown first in Settings so that the camera check is easy to find. */
+	@Override
+	public void xfContributeSyncSettings(Context ctx, PreferenceSet set, MainActivityDelegate a) {
+		// Kameros testas tik telefone (kamerą reikia nukreipti į automobilio ekraną)
+		if ((a != null) && !a.isCarActivity()) {
+			set.addButton(o -> {
+				o.title = R.string.xf_cam_sync;
+				o.subtitle = R.string.xf_cam_sync_sub;
+				o.onClick = () -> XfCamSync.show(a, this, false);
+			});
+		}
+		set.addBooleanPref(o -> {
+			o.store = getPreferenceStore();
+			o.pref = XF_SYNC_BADGE;
+			o.title = R.string.xf_sync_badge;
+			o.subtitle = R.string.xf_sync_badge_sub;
+		});
+	}
+
 	@Override
 	public void contributeSettings(Context ctx, PreferenceStore store, PreferenceSet set,
 																 ChangeableCondition visibility) {
@@ -372,36 +370,6 @@ public class YoutubeAddon extends WebBrowserAddon
 					R.string.xf_max_quality_none};
 			o.visibility = visibility;
 		});
-		set.addBooleanPref(o -> {
-			o.store = getPreferenceStore();
-			o.pref = XF_SYNC_BADGE;
-			o.title = R.string.xf_sync_badge;
-			o.subtitle = R.string.xf_sync_badge_sub;
-			o.visibility = visibility;
-		});
-		set.addBooleanPref(o -> {
-			o.store = getPreferenceStore();
-			o.pref = XF_AUTO_OPEN_ON_CAR;
-			o.title = R.string.xf_auto_open_on_car;
-			o.subtitle = R.string.xf_auto_open_on_car_sub;
-			o.visibility = visibility;
-		});
-		// xFermaTube: kameros testas tik telefone (kamerą reikia nukreipti į automobilio ekraną).
-		MainActivityDelegate xfa;
-		try {
-			xfa = MainActivityDelegate.get(ctx);
-		} catch (RuntimeException ex) {
-			xfa = null;
-		}
-		if ((xfa != null) && !xfa.isCarActivity()) {
-			MainActivityDelegate a = xfa;
-			set.addButton(o -> {
-				o.title = R.string.xf_cam_sync;
-				o.subtitle = R.string.xf_cam_sync_sub;
-				o.visibility = visibility;
-				o.onClick = () -> XfCamSync.show(a, this, false);
-			});
-		}
 		YoutubePlayerPreferences.contributeAutoFullscreenSetting(getPreferenceStore(), set, visibility);
 		if (AUTO) {
 			set.addBooleanPref(o -> {
@@ -497,6 +465,13 @@ public class YoutubeAddon extends WebBrowserAddon
 	}
 
 	private void setLastYoutubeUrl(String url) {
+		// xFermaTube: the phone opens Google sign-in pages; the car screen must not start on them
+		try {
+			String host = (url == null) ? null : android.net.Uri.parse(url).getHost();
+			if ((host == null) || !(host.equals("youtube.com") || host.endsWith(".youtube.com"))) return;
+		} catch (RuntimeException ex) {
+			return;
+		}
 		getPreferenceStore().applyStringPref(YT_LAST_URL, url);
 	}
 

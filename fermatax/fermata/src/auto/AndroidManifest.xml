@@ -5,13 +5,17 @@
 	tools:ignore="MissingLeanbackSupport">
 
     <uses-permission android:name="android.permission.WAKE_LOCK" />
-    <!-- xFermaTube (YouTube only): DISABLE_KEYGUARD, SYSTEM_ALERT_WINDOW, RECEIVE_BOOT_COMPLETED,
+    <!-- xFermaTube (YouTube only): DISABLE_KEYGUARD, RECEIVE_BOOT_COMPLETED,
          FOREGROUND_SERVICE_MEDIA_PROJECTION, WRITE_SECURE_SETTINGS and MANAGE_EXTERNAL_STORAGE are
          not requested: mirror, car apps over ADB and local files are not reachable in this build. -->
     <!-- xFermaTube: "Fix install source" asks the phone's installer to install the app's own APK
          again. The phone's installer refuses a request from an app that does not declare this, and
          the user has to allow it for the app ("Install unknown apps"). Nothing else is installed. -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <!-- xFermaTube: "Display over other apps", allowed by the user in the phone settings. While the
+         car screen is on, a 1x1 invisible window that ignores touches keeps Samsung phones drawing
+         the car screen when the phone app is in the background (XfKeepDrawing). -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 
 	<!-- Auto can run on TV-style head units that do not expose a touchscreen. -->
 	<uses-feature

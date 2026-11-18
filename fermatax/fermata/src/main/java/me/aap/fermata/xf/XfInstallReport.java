@@ -49,7 +49,7 @@ public final class XfInstallReport {
 		try {
 			a.createDialogBuilder()
 					.setTitle(R.string.xf_aa_check)
-					.setMessage(text)
+					.setView(reportView(ctx, text))
 					.setNegativeButton(fix ? R.string.xf_fix_now : R.string.xf_close,
 							fix ? (d, w) -> XfInstallFix.open(ctx) : null)
 					.setNeutralButton(R.string.xf_share, (d, w) -> share(ctx, text))
@@ -58,6 +58,31 @@ public final class XfInstallReport {
 		} catch (RuntimeException ex) {
 			Log.e(ex, "Failed to show the install report");
 		}
+	}
+
+	/** Copy on top: the report is long and the dialog buttons are only reachable after scrolling. */
+	private static android.view.View reportView(Context ctx, String text) {
+		float dp = ctx.getResources().getDisplayMetrics().density;
+		int pad = Math.round(20 * dp);
+		android.widget.LinearLayout root = new android.widget.LinearLayout(ctx);
+		root.setOrientation(android.widget.LinearLayout.VERTICAL);
+		root.setPadding(pad, Math.round(8 * dp), pad, 0);
+		android.widget.Button copyBtn = new android.widget.Button(ctx);
+		copyBtn.setText(android.R.string.copy);
+		copyBtn.setOnClickListener(v -> {
+			copy(ctx, text);
+			android.widget.Toast.makeText(ctx, android.R.string.copy, android.widget.Toast.LENGTH_SHORT).show();
+		});
+		root.addView(copyBtn, new android.widget.LinearLayout.LayoutParams(
+				android.view.ViewGroup.LayoutParams.WRAP_CONTENT, android.view.ViewGroup.LayoutParams.WRAP_CONTENT));
+		android.widget.ScrollView scroll = new android.widget.ScrollView(ctx);
+		android.widget.TextView tv = new android.widget.TextView(ctx);
+		tv.setText(text);
+		tv.setTextIsSelectable(true);
+		scroll.addView(tv);
+		root.addView(scroll, new android.widget.LinearLayout.LayoutParams(
+				android.view.ViewGroup.LayoutParams.MATCH_PARENT, android.view.ViewGroup.LayoutParams.WRAP_CONTENT));
+		return root;
 	}
 
 	private static void copy(Context ctx, String text) {
@@ -99,6 +124,8 @@ public final class XfInstallReport {
 				.append(", Android ").append(Build.VERSION.RELEASE).append(" (API ")
 				.append(Build.VERSION.SDK_INT).append(")\n");
 		b.append("System build: ").append(Build.DISPLAY).append('\n');
+		b.append("Display over other apps (keeps the car picture moving): ")
+				.append(XfKeepDrawing.allowed(ctx) ? "allowed" : "not allowed").append('\n');
 
 		b.append("\nInstall source\n");
 		String installer = null;
@@ -192,7 +219,113 @@ public final class XfInstallReport {
 		}
 		b.append("\nNot readable by the app, check by hand: Android Auto settings > Developer " +
 				"settings > Unknown sources must be ticked.\n");
+		lastCrash(ctx, b);
+		recentLog(b);
 		return b.toString();
+	}
+
+	/**
+	 * The app's own recent log lines (an app can read only its own): car and phone window
+	 * lifecycle, WebView visibility, video delay stalls, warnings and errors.
+	 */
+	private static void recentLog(StringBuilder b) {
+		try {
+			Process p = Runtime.getRuntime().exec(new String[]{"logcat", "-d", "-v", "time", "-t", "3000",
+					"--pid=" + android.os.Process.myPid()});
+			java.util.regex.Pattern keep = java.util.regex.Pattern.compile(
+					"^\\S+ \\S+ ([EF]/|W/(?!chromium)|./xf)");
+			StringBuilder log = new StringBuilder();
+			try (java.io.BufferedReader r = new java.io.BufferedReader(new java.io.InputStreamReader(
+					p.getInputStream(), java.nio.charset.StandardCharsets.UTF_8))) {
+				for (String line; (line = r.readLine()) != null; ) {
+					if (!keep.matcher(line).find()) continue;
+					if (line.length() > 300) line = line.substring(0, 300) + "…";
+					log.append(line).append('\n');
+					if (log.length() > 40000) log.delete(0, 20000);
+				}
+			}
+			p.destroy();
+			if (log.length() > 10000) log.delete(0, log.length() - 10000);
+			b.append("\nRecent log\n").append(log.length() == 0 ? "(empty)\n" : log);
+		} catch (Exception ex) {
+			b.append("\nRecent log: unreadable (").append(ex.getClass().getSimpleName()).append(")\n");
+		}
+	}
+
+	private static java.io.File carStartupErrorFile(Context ctx) {
+		return new java.io.File(new java.io.File(ctx.getNoBackupFilesDir(), "diagnostics"), "car-startup-error.txt");
+	}
+
+	/** A car screen startup failure is caught (not a crash), so it is kept here for the report. */
+	public static void recordCarStartupError(Context ctx, Throwable error) {
+		try {
+			java.io.StringWriter sw = new java.io.StringWriter();
+			error.printStackTrace(new java.io.PrintWriter(sw));
+			String text = date(System.currentTimeMillis()) + '\n' + sw;
+			if (text.length() > 6000) text = text.substring(0, 6000) + "…";
+			java.io.File f = carStartupErrorFile(ctx);
+			java.io.File dir = f.getParentFile();
+			if ((dir != null) && !dir.isDirectory()) dir.mkdirs();
+			// Append: a follow-up failure must not hide the first one; keep the file small
+			if (f.isFile() && (f.length() > 20000)) f.delete();
+			java.nio.file.Files.write(f.toPath(), (text + '\n').getBytes(java.nio.charset.StandardCharsets.UTF_8),
+					java.nio.file.StandardOpenOption.CREATE, java.nio.file.StandardOpenOption.APPEND);
+		} catch (Throwable ignore) {
+		}
+	}
+
+	/** The newest crash recorded by the diagnostics crash handler, so that it can be copied without a PC. */
+	private static void lastCrash(Context ctx, StringBuilder b) {
+		try {
+			java.io.File se = carStartupErrorFile(ctx);
+			if (se.isFile()) {
+				b.append("\nCar screen startup error\n").append(new String(
+						java.nio.file.Files.readAllBytes(se.toPath()), java.nio.charset.StandardCharsets.UTF_8))
+						.append('\n');
+			}
+		} catch (Exception ignore) {
+		}
+		try {
+			java.io.File dir = new java.io.File(new java.io.File(ctx.getNoBackupFilesDir(), "diagnostics"), "crash");
+			java.io.File[] files = dir.listFiles((d, n) -> n.startsWith("crash-") && n.endsWith(".json"));
+			if ((files == null) || (files.length == 0)) return;
+			java.util.Arrays.sort(files, (x, y) -> Long.compare(y.lastModified(), x.lastModified()));
+			java.io.File last = files[0];
+			// Short list first: when, which exception, where
+			b.append("\nRecent crashes (").append(files.length).append(")\n");
+			java.util.regex.Pattern p = java.util.regex.Pattern.compile(
+					"\"type\":\"([^\"]+)\",\"stack\":\\[\"([^\"]+)\"(?:,\"([^\"]+)\")?");
+			for (int i = 0; i < Math.min(5, files.length); i++) {
+				String t = new String(java.nio.file.Files.readAllBytes(files[i].toPath()),
+						java.nio.charset.StandardCharsets.UTF_8);
+				java.util.regex.Matcher m = p.matcher(t);
+				b.append("- ").append(date(files[i].lastModified())).append(": ");
+				if (m.find()) {
+					b.append(m.group(1)).append(" at ").append(m.group(2));
+					if (m.group(3) != null) b.append(" < ").append(m.group(3));
+				} else {
+					b.append("?");
+				}
+				b.append('\n');
+			}
+			String raw = new String(java.nio.file.Files.readAllBytes(last.toPath()),
+					java.nio.charset.StandardCharsets.UTF_8);
+			// What happened before the crash: breadcrumb events, compact
+			java.util.regex.Matcher e = java.util.regex.Pattern.compile(
+					"\"elapsed_ms\":(\\d+)[^{}]*?\"category\":\"([^\"]+)\",\"event\":\"([^\"]+)\"")
+					.matcher(raw.replace("\\\"", "\""));
+			StringBuilder ev = new StringBuilder();
+			while (e.find()) {
+				ev.append(e.group(1)).append("ms ").append(e.group(2)).append('/').append(e.group(3)).append('\n');
+			}
+			if (ev.length() > 3000) ev.delete(0, ev.length() - 3000);
+			if (ev.length() > 0) b.append("\nEvents before the last crash\n").append(ev);
+			String text = raw.replace("\\n", "\n").replace("\\t", "  ");
+			if (text.length() > 4000) text = text.substring(0, 4000) + "…";
+			b.append("\nLast crash (").append(date(last.lastModified())).append(")\n").append(text).append('\n');
+		} catch (Exception ex) {
+			b.append("\nLast crash: unreadable (").append(ex.getClass().getSimpleName()).append(")\n");
+		}
 	}
 
 	private static String app(PackageManager pm, String pkg) {

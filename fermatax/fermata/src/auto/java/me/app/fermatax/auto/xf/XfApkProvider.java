@@ -24,6 +24,7 @@ import java.io.FileNotFoundException;
 public final class XfApkProvider extends ContentProvider {
 	public static final String MIME = "application/vnd.android.package-archive";
 	private static final String NAME = "xFermaTube.apk";
+	private static final String UPDATE = "update.apk";
 
 	/** content://&lt;package&gt;.xfapk/xFermaTube.apk */
 	public static Uri uri(Context ctx) {
@@ -45,10 +46,15 @@ public final class XfApkProvider extends ContentProvider {
 	private File file(Uri uri) throws FileNotFoundException {
 		Context ctx = getContext();
 		java.util.List<String> path = uri.getPathSegments();
-		if ((ctx == null) || (path.size() != 1) || !NAME.equals(path.get(0))) {
-			throw new FileNotFoundException("Not served");
+		if ((ctx == null) || (path.size() != 1)) throw new FileNotFoundException("Not served");
+		if (NAME.equals(path.get(0))) return apk(ctx);
+		// The downloaded update (XfUpdate), checked before it is handed over
+		if (UPDATE.equals(path.get(0))) {
+			File f = me.aap.fermata.xf.XfUpdate.file(ctx);
+			if (!f.isFile()) throw new FileNotFoundException("No update downloaded");
+			return f;
 		}
-		return apk(ctx);
+		throw new FileNotFoundException("Not served");
 	}
 
 	@Override
