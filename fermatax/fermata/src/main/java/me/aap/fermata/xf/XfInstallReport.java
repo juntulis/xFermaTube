@@ -124,8 +124,7 @@ public final class XfInstallReport {
 				.append(", Android ").append(Build.VERSION.RELEASE).append(" (API ")
 				.append(Build.VERSION.SDK_INT).append(")\n");
 		b.append("System build: ").append(Build.DISPLAY).append('\n');
-		b.append("Display over other apps (keeps the car picture moving): ")
-				.append(XfKeepDrawing.allowed(ctx) ? "allowed" : "not allowed").append('\n');
+		b.append("Keeping the car picture moving: ").append(XfKeepDrawing.status(ctx)).append('\n');
 
 		b.append("\nInstall source\n");
 		String installer = null;

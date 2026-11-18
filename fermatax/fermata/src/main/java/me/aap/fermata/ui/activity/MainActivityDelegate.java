@@ -286,10 +286,10 @@ public class MainActivityDelegate extends ActivityDelegate
 		init();
 
 		AddonManager.get().onActivityCreate(this);
-		// One question per start: the install source first, then keeping the car picture moving,
+		// One question per start: the install source first,
 		// then the microphone, then updates
 		if (!me.aap.fermata.xf.XfInstallFix.checkAtStartup(this) &&
-				!me.aap.fermata.xf.XfKeepDrawing.checkAtStartup(this) && !xfAskMicrophoneOnPhone()) {
+				!xfAskMicrophoneOnPhone()) {
 			me.aap.fermata.xf.XfUpdate.checkAtStartup(this);
 		}
 

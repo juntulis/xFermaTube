@@ -13,7 +13,7 @@
 </p>
 
 > [!WARNING]
-> **Car picture freezing or the car screen not starting after the latest Android Auto update?** Try the beta [v1.0.4-beta.1](../../releases/tag/v1.0.4-beta.1). On Samsung phones allow **Appear on top** when the app asks. [Why](#the-car-picture-freezes-when-the-phone-screen-is-off-or-shows-another-app)
+> **After the latest Android Auto update: car screen black or grey, buttons too big, or the picture freezing when the phone is locked?** Try the beta [v1.0.4-beta.2](../../releases/tag/v1.0.4-beta.2). No extra permission is needed any more. [Why](#the-car-picture-freezes-or-the-car-screen-turns-grey-newer-android-auto)
 
 > [!IMPORTANT]
 > **Quick install** (v1.0.3-beta.3 and later: no helper app, PC or Wi‑Fi needed)
@@ -63,7 +63,7 @@ I built this to fix one annoying problem for myself, not to make money or collec
 - **No ads, analytics or tracking added.** There are no analytics or crash-reporting SDKs, no accounts and no xFermata server. Nothing is sent to me.
 - **The microphone stays on the phone.** It is used only for the sync measurement and only while a video (or the sync check) is playing. The recording is turned into a loudness curve in memory to find the delay, and the audio is never saved or uploaded. See [`XfMicRecorder.java`](fermatax/modules/web/src/main/java/me/aap/fermata/addon/web/yt/XfMicRecorder.java).
 - **The camera is used only during the one-time sync check.** It is asked for when you tap **Start**, not at install. Each frame is turned into one brightness number in memory to find the flashes; no picture is saved or uploaded. See [`XfCamSync.java`](fermatax/modules/web/src/main/java/me/aap/fermata/addon/web/yt/XfCamSync.java).
-- **Few permissions.** The APK declares internet, microphone, notifications and media playback, plus a few routine ones (network and Wi-Fi state, wake lock, audio settings). Since v1.0.3-beta.3 it also declares the permission to request installs: **Fix now** uses it only to reinstall xFermaTube itself, it does nothing until you allow it in the phone's settings, and you can turn it off again afterwards. Since v1.0.3 it declares the camera, for the sync check only. Since v1.0.4-beta.1 it declares *Display over other apps* (Samsung: *Appear on top*): while the car screen is on, the app keeps one invisible 1×1 pixel window on the phone so that the car picture doesn't freeze ([why](#the-car-picture-freezes-when-the-phone-screen-is-off-or-shows-another-app)). It shows nothing and catches no taps, and it does nothing until you allow it. The location, storage, boot and system-settings permissions that FermataX declares are removed.
+- **Few permissions.** The APK declares internet, microphone, notifications and media playback, plus a few routine ones (network and Wi-Fi state, wake lock, audio settings). Since v1.0.3-beta.3 it also declares the permission to request installs: **Fix now** uses it only to reinstall xFermaTube itself, it does nothing until you allow it in the phone's settings, and you can turn it off again afterwards. Since v1.0.3 it declares the camera, for the sync check only. Since v1.0.4-beta.1 it declares *Display over other apps* (Samsung: *Appear on top*). Since v1.0.4-beta.2 the app doesn't need it and no longer asks for it: it is an optional extra on Samsung phones only ([why](#the-car-picture-freezes-or-the-car-screen-turns-grey-newer-android-auto)), and it does nothing until you allow it. The location, storage, boot and system-settings permissions that FermataX declares are removed.
 - **The update check asks GitHub only.** Since v1.0.4, once a day when you open the app on the phone, it asks GitHub for the latest release. Nothing is sent except that request; GitHub sees your IP address as with any download. You can turn it off: Settings → **Check for updates**. See [`XfUpdate.java`](fermatax/fermata/src/main/java/me/aap/fermata/xf/XfUpdate.java).
 - **YouTube is the normal mobile YouTube site.** Google's own privacy policy applies, the same as in any browser.
 
@@ -82,8 +82,7 @@ Since **v1.0.3-beta.3** the app fixes this itself. You install the APK the norma
 4. **Allow the microphone** when the app asks. The car screen can't show this request. You can also grant it later: Settings → Apps → xFermaTube → Permissions → Microphone.
 5. **Connect to the car and open xFermaTube** from the Android Auto app list. If the phone was already connected, unplug it and connect again: Android Auto reads the app list when it connects.
 6. **Do the one-time sync check** when the phone offers it: see [below](#the-one-time-sync-check).
-7. **Samsung phones: allow Appear on top** when the app asks (v1.0.4-beta.1 and later). Find xFermaTube in the list and turn it on. Without it the car picture can freeze when the phone screen is off or shows another app. Other phones: only if you see this freeze, Settings → **Keep the car picture moving**.
-8. Optional: open xFermaTube on the phone and tap **Sign in to YouTube**. The car uses the same session.
+7. Optional: open xFermaTube on the phone and tap **Sign in to YouTube**. The car uses the same session.
 
 **Updates.** Since v1.0.4 the app tells you when a new version is out (on the phone, at most once a day). Tap **Update**: it downloads the new APK from GitHub, checks it, and hands it to the phone's installer the same way **Fix now** does, so the video app stays in Android Auto. You can also check by hand: Settings → **Check for updates now**. Pre-releases (betas) are never offered.
 
@@ -112,13 +111,22 @@ If the original FermataX doesn't show its video app in your car either, the prob
 
 When you ask for help, tap **Copy** in the install check and paste the report: it contains no personal data (app version, phone model, Android Auto version, install source).
 
-### The car picture freezes when the phone screen is off or shows another app
+### The car picture freezes or the car screen turns grey (newer Android Auto)
 
-A newer Android Auto (seen with 18.2) shows apps on the car screen in a new kind of window, and the phone doesn't count that window as visible. Samsung phones (One UI) stop the screen drawing of apps that are not visible, to save battery. So a few seconds after xFermaTube on the phone goes to the background, the car picture stops moving, while the sound keeps playing. Opening the app on the phone brings the picture back.
+A newer Android Auto (seen with 18.2) shows apps on the car screen in a new kind of window. That broke xFermaTube in three ways, and v1.0.3 has all of them:
 
-Since v1.0.4-beta.1 the app keeps one invisible 1×1 pixel window on the phone while the car screen is on. Android then treats the app as visible and keeps drawing the car screen. For this the app needs **Display over other apps** (Samsung: **Appear on top**). On Samsung phones it asks once at start; on other phones you can turn it on in Settings → **Keep the car picture moving** if you see the freeze. The install check shows whether it is allowed.
+- **The car screen stays black or keeps restarting.** The new window refuses a setting the app's theme used. Fixed since v1.0.4-beta.1.
+- **The picture freezes while the sound keeps playing**, a few seconds after the phone is locked or shows another app. The phone doesn't count the new car window as visible, and Samsung phones (One UI) stop the screen drawing of apps that have no visible window, to save battery.
+- **The car screen turns plain grey, the buttons are far too big, or they vanish when the car switches to night mode.** The new window describes itself with the phone's screen (its pixel density, portrait) instead of the car's, and switches to the car's values a moment later. The app laid everything out for the wrong screen.
 
-I have seen this freeze only with Samsung, and I tested the fix with Android Auto's Desktop Head Unit on a Samsung phone with Android 17. If your car picture still freezes, please tell me your phone model and Android Auto version.
+Since v1.0.4-beta.2 the last two are fixed, with no extra permission:
+
+- While the car screen is on, the app posts an empty input event to its own frame clock a few times a second. Samsung keeps drawing an app that is handling input, so the picture keeps moving with the phone locked. Only on Samsung phones.
+- The app always lays the car screen out with the car display's own values. With an older Android Auto the two already agree, and nothing changes.
+
+v1.0.4-beta.1 used an invisible 1×1 pixel window instead (*Display over other apps*, Samsung: *Appear on top*). That only helped while the phone was unlocked. The app no longer asks for it, and you can take the permission back in the phone's settings. On Samsung it is still there as an optional extra: Settings → **Extra help for a frozen car picture**.
+
+I tested beta.2 with Android Auto's Desktop Head Unit on a Samsung phone with Android 17, also with the phone locked, and not yet in a real car. If your car picture still freezes or the screen looks wrong, open xFermaTube on the phone → **Android Auto install check** → **Copy**, and send me the report with your phone model and Android Auto version: it now notes when the frames stop.
 
 ### Fix the install source on the phone
 

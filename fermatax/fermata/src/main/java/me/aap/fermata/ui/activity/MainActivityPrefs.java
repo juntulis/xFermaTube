@@ -87,8 +87,6 @@ public interface MainActivityPrefs
 	Pref<IntSupplier> INITIAL_SETUP_VERSION = Pref.i("INITIAL_SETUP_VERSION", 0);
 	/** xFermaTube: the microphone explanation was answered once on the phone. */
 	Pref<BooleanSupplier> XF_MIC_ASKED = Pref.b("XF_MIC_ASKED", false);
-	/** xFermaTube: "Don't ask again" for the "Display over other apps" question (keeps the car picture moving). */
-	Pref<BooleanSupplier> XF_OVERLAY_ASKED = Pref.b("XF_OVERLAY_ASKED", false);
 	/** xFermaTube: look for a newer release on GitHub once a day when opened on the phone. */
 	Pref<BooleanSupplier> XF_UPDATE_CHECK = Pref.b("XF_UPDATE_CHECK", true);
 

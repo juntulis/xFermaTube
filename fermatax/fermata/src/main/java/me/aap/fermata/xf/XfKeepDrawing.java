@@ -5,16 +5,18 @@ import android.content.Intent;
 import android.graphics.PixelFormat;
 import android.net.Uri;
 import android.os.Build;
+import android.os.Handler;
+import android.os.Looper;
 import android.provider.Settings;
+import android.view.Choreographer;
 import android.view.Gravity;
 import android.view.View;
 import android.view.WindowManager;
 
 import androidx.annotation.Nullable;
 
-import me.aap.fermata.R;
-import me.aap.fermata.ui.activity.MainActivityDelegate;
-import me.aap.fermata.ui.activity.MainActivityPrefs;
+import java.lang.reflect.Method;
+
 import me.aap.utils.log.Log;
 
 /**
@@ -22,14 +24,40 @@ import me.aap.utils.log.Log;
  * <p>
  * The newer Android Auto shows the car screen in a window that the phone does not count as
  * visible. Samsung phones stop the animation frames of an app that has no visible window
- * ("stop animation in background states"), so once the xFermaTube screen on the phone goes to the
- * background, the car picture freezes while the sound goes on. A 1x1 transparent window that
- * ignores touches keeps the app visible for the system. It needs the "Display over other apps"
- * permission, which the user gives in the phone settings; without it nothing changes.
+ * ("stop animation in background states"): a few seconds after the xFermaTube screen on the phone
+ * goes to the background or the phone is locked, the car picture freezes while the sound goes on.
+ * <p>
+ * Samsung's own rule is that an app receiving input is not in the background: posting an input
+ * callback to the Choreographer resets its background state and schedules the next frame. While
+ * the car screen is on, the app posts an empty one a few times a second. No permission is needed
+ * and it works with the phone locked.
+ * <p>
+ * The 1x1 transparent window of v1.0.4-beta.1 ("Display over other apps") stays as an optional
+ * extra for those who allowed it; it cannot help with the phone locked.
  */
 public final class XfKeepDrawing {
+	private static final int TICK_MS = 250;
+	private static final int CALLBACK_INPUT = 0; // Choreographer.CALLBACK_INPUT
+	private static final Handler main = new Handler(Looper.getMainLooper());
+	private static final Runnable noop = () -> {
+	};
 	@Nullable
 	private static View view;
+	@Nullable
+	private static Method postCallback;
+	private static boolean ticking;
+	private static boolean postFailed;
+	private static final Runnable tick = new Runnable() {
+		@Override
+		public void run() {
+			if (!ticking) return;
+			if (!postInputCallback()) {
+				ticking = false;
+				return;
+			}
+			main.postDelayed(this, TICK_MS);
+		}
+	};
 
 	private XfKeepDrawing() {
 	}
@@ -45,6 +73,13 @@ public final class XfKeepDrawing {
 		} catch (RuntimeException ex) {
 			return false;
 		}
+	}
+
+	/** For the install report: how the picture is kept moving on this phone. */
+	public static String status(Context ctx) {
+		if (!needed()) return "not needed";
+		return (postFailed ? "frame keeper unavailable" : "frame keeper ok") + ", overlay " +
+				(allowed(ctx) ? "allowed" : "not allowed");
 	}
 
 	/** Opens the "Display over other apps" setting of this app. */
@@ -64,11 +99,37 @@ public final class XfKeepDrawing {
 		}
 	}
 
-	/** Called when the car screen starts: adds the invisible window once, if allowed. */
+	/** Main thread only: the Choreographer belongs to the thread that asks for it. */
+	private static boolean postInputCallback() {
+		if (postFailed) return false;
+		try {
+			Method m = postCallback;
+			if (m == null) {
+				m = Choreographer.class.getDeclaredMethod("postCallback", int.class, Runnable.class,
+						Object.class);
+				m.setAccessible(true);
+				postCallback = m;
+			}
+			m.invoke(Choreographer.getInstance(), CALLBACK_INPUT, noop, null);
+			return true;
+		} catch (Throwable ex) {
+			postFailed = true;
+			android.util.Log.w("xfCar", "keep drawing: input callback unavailable: " + ex);
+			return false;
+		}
+	}
+
+	/** Called when the car screen starts. */
 	public static void start(Context ctx) {
+		if (needed() && !ticking && !postFailed) {
+			ticking = true;
+			main.removeCallbacks(tick);
+			main.post(tick);
+			android.util.Log.i("xfCar", "keep drawing: frame keeper on");
+		}
 		if (view != null) return;
 		Context app = ctx.getApplicationContext();
-		if (!allowed(app)) return;
+		if (!needed() || !allowed(app)) return;
 		try {
 			WindowManager wm = app.getSystemService(WindowManager.class);
 			if (wm == null) return;
@@ -85,14 +146,16 @@ public final class XfKeepDrawing {
 			v.setBackgroundColor(0x01000000);
 			wm.addView(v, lp);
 			view = v;
-			android.util.Log.i("xfCar", "keep drawing: on");
+			android.util.Log.i("xfCar", "keep drawing: overlay on");
 		} catch (RuntimeException ex) {
-			android.util.Log.w("xfCar", "keep drawing failed: " + ex);
+			android.util.Log.w("xfCar", "keep drawing: overlay failed: " + ex);
 		}
 	}
 
 	/** Called when the car screen is closed. */
 	public static void stop(Context ctx) {
+		ticking = false;
+		main.removeCallbacks(tick);
 		View v = view;
 		if (v == null) return;
 		view = null;
@@ -100,29 +163,7 @@ public final class XfKeepDrawing {
 			WindowManager wm = ctx.getApplicationContext().getSystemService(WindowManager.class);
 			if (wm != null) wm.removeViewImmediate(v);
 		} catch (RuntimeException ex) {
-			android.util.Log.w("xfCar", "keep drawing remove failed: " + ex);
+			android.util.Log.w("xfCar", "keep drawing: overlay remove failed: " + ex);
 		}
-	}
-
-	/** One question at start on the phone, only where the picture is known to freeze. */
-	public static boolean checkAtStartup(MainActivityDelegate a) {
-		if (!XfConfig.YOUTUBE_ONLY || a.isCarActivity() || !needed()) return false;
-		Context ctx = a.getContext();
-		if (allowed(ctx) || a.getPrefs().getBooleanPref(MainActivityPrefs.XF_OVERLAY_ASKED)) return false;
-		a.getHandler().post(() -> {
-			try {
-				a.createDialogBuilder()
-						.setTitle(R.string.xf_overlay_title)
-						.setMessage(R.string.xf_overlay_message)
-						.setNegativeButton(R.string.xf_overlay_never, (d, w) ->
-								a.getPrefs().applyBooleanPref(MainActivityPrefs.XF_OVERLAY_ASKED, true))
-						.setNeutralButton(R.string.xf_overlay_later, null)
-						.setPositiveButton(R.string.xf_overlay_open, (d, w) -> open(ctx))
-						.show();
-			} catch (RuntimeException ex) {
-				Log.e(ex, "Failed to show the overlay dialog");
-			}
-		});
-		return true;
 	}
 }

@@ -569,7 +569,7 @@ public class SettingsFragment extends MainActivityFragment
 				o.csubtitle = ctx.getString(R.string.xf_update_check_now_sub, me.aap.fermata.xf.XfConfig.RELEASE);
 				o.onClick = () -> me.aap.fermata.xf.XfUpdate.checkNow(a);
 			});
-			set.addButton(o -> {
+			if (me.aap.fermata.xf.XfKeepDrawing.needed()) set.addButton(o -> {
 				boolean on = me.aap.fermata.xf.XfKeepDrawing.allowed(ctx);
 				o.title = R.string.xf_overlay_pref;
 				o.subtitle = on ? R.string.xf_overlay_pref_on : R.string.xf_overlay_pref_off;

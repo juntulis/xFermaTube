@@ -26,16 +26,9 @@ Android Auto cannot show this request on the car screen, so it is asked here.</s
     <string name="xf_account_sign_out_sub" translatable="false">Signs YouTube out on the phone and on the car screen.</string>
     <string name="xf_account_signed_in_done" translatable="false">Signed in to YouTube.</string>
     <string name="xf_account_signed_out_done" translatable="false">Signed out of YouTube.</string>
-    <string name="xf_overlay_title" translatable="false">Keep the car picture moving</string>
-    <string name="xf_overlay_message" translatable="false">With the newer Android Auto, Samsung phones stop the car picture (the sound goes on) once xFermaTube has been opened on the phone and then left in the background.
-
-To prevent it, xFermaTube keeps a 1×1 pixel invisible window while the car screen is on. It does not cover anything and does not catch touches. Android calls this \"Display over other apps\" (Samsung: \"Appear on top\"). On the next screen find xFermaTube in the list and turn it on, then come back.</string>
-    <string name="xf_overlay_open" translatable="false">Open the setting</string>
-    <string name="xf_overlay_later" translatable="false">Not now</string>
-    <string name="xf_overlay_never" translatable="false">Don\'t ask again</string>
-    <string name="xf_overlay_pref" translatable="false">Keep the car picture moving</string>
-    <string name="xf_overlay_pref_on" translatable="false">On (\"Display over other apps\" is allowed).</string>
-    <string name="xf_overlay_pref_off" translatable="false">Off. Turn it on if the car picture freezes while the sound goes on: allow xFermaTube in \"Display over other apps\" (Samsung: \"Appear on top\").</string>
+    <string name="xf_overlay_pref" translatable="false">Extra help for a frozen car picture</string>
+    <string name="xf_overlay_pref_on" translatable="false">On (\"Display over other apps\" is allowed). Normally not needed.</string>
+    <string name="xf_overlay_pref_off" translatable="false">Off, normally not needed. Only if the car picture still freezes while the sound goes on: allow xFermaTube in \"Display over other apps\" (Samsung: \"Appear on top\").</string>
     <string name="xf_aa_check" translatable="false">Android Auto install check</string>
     <string name="xf_aa_check_sub" translatable="false">Shows how the app was installed. Use it when Android Auto shows only the audio entry.</string>
     <string name="xf_share" translatable="false">Share</string>

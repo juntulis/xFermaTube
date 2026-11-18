@@ -178,8 +178,27 @@ public class MainCarActivity extends CarActivity implements FermataActivity {
 		super.attachBaseContext(MainActivityDelegate.attachBaseContext(base));
 	}
 
+	// xFermaTube: the newer Android Auto inflates with the phone's screen configuration
+	private android.view.LayoutInflater xfHostInflater;
+	private android.view.LayoutInflater xfCarInflater;
+
+	@Override
+	public android.view.LayoutInflater getLayoutInflater() {
+		android.view.LayoutInflater host = super.getLayoutInflater();
+		if (host == null) return null;
+		if (host == xfHostInflater) return xfCarInflater;
+		android.view.LayoutInflater car = me.aap.fermata.xf.XfCarContext.inflater(host, this);
+		if (car != host) { // once wrapped, stay wrapped; otherwise check again next time
+			xfHostInflater = host;
+			xfCarInflater = car;
+		}
+		return car;
+	}
+
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
+		android.util.Log.i("xfDiag", "car onCreate " + System.identityHashCode(this) + " state=" +
+				(savedInstanceState != null) + " uiMode=" + getResources().getConfiguration().uiMode);
 		currentInstance = this;
 		MainActivityDelegate.setTheme(this, true);
 		super.onCreate(savedInstanceState);
@@ -230,6 +249,12 @@ public class MainCarActivity extends CarActivity implements FermataActivity {
 		}
 
 		MainActivityDelegate d = null;
+		try { // for the install report: which screen the host's layout context describes
+			me.aap.fermata.xf.XfDrawDiag.chain("xfDiag", "host",
+					super.getLayoutInflater().getContext());
+			me.aap.fermata.xf.XfDrawDiag.chain("xfDiag", "layout", getLayoutInflater().getContext());
+		} catch (Throwable ignore) {
+		}
 		try {
 			MainActivityDelegate created =
 					new MainActivityDelegate(this, connection.createBinder());
@@ -294,6 +319,18 @@ public class MainCarActivity extends CarActivity implements FermataActivity {
 		super.onStart();
 		MainActivityDelegate d = createdDelegate;
 		if (d != null) d.onHostForegrounded();
+		android.util.Log.i("xfDiag", "car onStart " + System.identityHashCode(this));
+		try {
+			me.aap.fermata.xf.XfDrawDiag.start(getContext(), getWindow().getDecorView());
+		} catch (Throwable t) {
+			android.util.Log.w("xfDiag", "diag start: " + t);
+		}
+	}
+
+	@Override
+	public void onStop() {
+		android.util.Log.i("xfDiag", "car onStop " + System.identityHashCode(this));
+		super.onStop();
 	}
 
 	@Override
@@ -329,7 +366,9 @@ public class MainCarActivity extends CarActivity implements FermataActivity {
 		if (currentInstance == this) {
 			currentInstance = null;
 			me.aap.fermata.xf.XfKeepDrawing.stop(getContext());
+			me.aap.fermata.xf.XfDrawDiag.stop();
 		}
+		android.util.Log.i("xfDiag", "car onDestroy " + System.identityHashCode(this));
 		DiagnosticsObserver.activity(DiagnosticsObserver.ActivityEvent.DESTROYED, diagnosticsActivityId);
 		super.onDestroy();
 		MainActivityDelegate d = createdDelegate;
@@ -361,6 +400,8 @@ public class MainCarActivity extends CarActivity implements FermataActivity {
 	@Override
 	public void onConfigurationChanged(Configuration configuration) {
 		Log.i("Configuration changed: ", configuration);
+		android.util.Log.i("xfDiag", "car onConfigurationChanged uiMode=" + configuration.uiMode +
+				" dpi=" + configuration.densityDpi);
 		super.onConfigurationChanged(configuration);
 	}
 
