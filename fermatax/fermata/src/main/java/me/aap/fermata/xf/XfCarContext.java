@@ -17,7 +17,11 @@ import androidx.annotation.Nullable;
  * time later. Views inflated with it were 2.6 times too big (buttons, missing sync badge) and
  * picked the portrait layout, which then collapsed to an empty grey screen. This context wraps the
  * host's one and answers with the car activity's resources, which always describe the car screen.
- * With the older Android Auto the two already agree and nothing is wrapped.
+ * <p>
+ * It is used even when the two agree at the moment the car screen is created: when the car screen
+ * is created again in a living process (the car reconnects), the host first reports the car's
+ * screen and switches to the phone's later, and the content collapsed to zero width. With the older
+ * Android Auto the two agree all the time, so the wrapper changes nothing there.
  */
 public final class XfCarContext extends ContextWrapper {
 	private final Resources res;
@@ -32,20 +36,22 @@ public final class XfCarContext extends ContextWrapper {
 	}
 
 	/**
-	 * Returns the host's inflater, or a copy of it that inflates with the car activity's resources
-	 * when the host's context describes another screen.
+	 * Returns a copy of the host's inflater that inflates with the car activity's resources (the
+	 * host's inflater itself only if its context already uses them, or if the copy can't be made).
 	 */
 	public static LayoutInflater inflater(LayoutInflater host, Context carActivity) {
 		try {
 			Context hc = host.getContext();
 			if (hc instanceof XfCarContext) return host;
 			Resources car = carActivity.getResources();
-			Configuration h = hc.getResources().getConfiguration();
-			Configuration c = car.getConfiguration();
-			if (sameScreen(h, c)) return host;
+			Resources hr = hc.getResources();
+			if (hr == car) return host;
 			XfCarContext ctx = new XfCarContext(hc, car);
+			ctx.getTheme(); // Now, so that a failure falls back to the host's inflater
 			LayoutInflater li = host.cloneInContext(ctx);
 			ctx.inflater = li;
+			Configuration h = hr.getConfiguration();
+			Configuration c = car.getConfiguration();
 			android.util.Log.i("xfCar", "car layout: host says " + h.densityDpi + "dpi w" +
 					h.screenWidthDp + " orient " + h.orientation + ", car is " + c.densityDpi + "dpi w" +
 					c.screenWidthDp + " orient " + c.orientation + ": using the car's");
@@ -54,12 +60,6 @@ public final class XfCarContext extends ContextWrapper {
 			android.util.Log.w("xfCar", "car layout: wrapper failed: " + ex);
 			return host;
 		}
-	}
-
-	private static boolean sameScreen(Configuration a, Configuration b) {
-		if ((a.densityDpi != b.densityDpi) || (a.orientation != b.orientation)) return false;
-		int w = Math.max(a.screenWidthDp, b.screenWidthDp);
-		return Math.abs(a.screenWidthDp - b.screenWidthDp) * 10 <= w;
 	}
 
 	@Override
