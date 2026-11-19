@@ -13,6 +13,7 @@ import androidx.core.content.ContextCompat;
 
 import java.util.Locale;
 
+import me.aap.fermata.addon.web.FermataWebView;
 import me.aap.fermata.ui.activity.MainActivityDelegate;
 import me.aap.utils.log.Log;
 
@@ -25,7 +26,7 @@ import me.aap.utils.log.Log;
  * <p>Į puslapį grąžinama tik garsumo kreivė (RMS kas 10 ms) ir pirmo įrašo kadro laikas
  * (epochos ms), ne pats garsas.</p>
  */
-final class XfMicRecorder {
+public final class XfMicRecorder {
 	private static final int BIN_MS = 10;
 	static volatile boolean busy;   // ir kameros testui (XfCamSync): mikrofonas vienas
 
@@ -38,7 +39,16 @@ final class XfMicRecorder {
 	 * @param arg sekundės, pasirinktinai su „;ask“ (ranka paleistas matavimas: telefone be leidimo
 	 *            parodoma leidimo užklausa; šis matavimas vis tiek grąžina klaidą, kitas jau veiks).
 	 */
-	static void record(YoutubeWebView web, String arg) {
+	public static void record(FermataWebView web, String arg) {
+		record(web, arg, null);
+	}
+
+	/**
+	 * @param deliver asked on the main thread when the recording is done: false = the result is
+	 *                dropped (the page that asked for it is gone). null = always delivered.
+	 */
+	public static void record(FermataWebView web, String arg,
+			@androidx.annotation.Nullable java.util.function.BooleanSupplier deliver) {
 		if (busy) return;
 		String secondsArg = (arg == null) ? "" : arg;
 		int sep = secondsArg.indexOf(';');
@@ -66,14 +76,22 @@ final class XfMicRecorder {
 				busy = false;
 			}
 			String js = "window.__xfDelay&&window.__xfDelay._mic(" + json + ")";
-			web.post(() -> web.evaluateJavascript(js, null));
+			web.post(() -> {
+				if ((deliver == null) || deliver.getAsBoolean()) web.evaluateJavascript(js, null);
+			});
 		}, "xf-mic");
 		t.setDaemon(true);
 		t.start();
 	}
 
+	/** The measurement is not made: the page is told why, so it does not wait for a result. */
+	public static void refuse(FermataWebView web, String msg) {
+		String js = "window.__xfDelay&&window.__xfDelay._mic(" + err(msg) + ")";
+		web.post(() -> web.evaluateJavascript(js, null));
+	}
+
 	/** Leidimo užklausa tik telefone: automobilio ekrane Android Auto jos parodyti negali. */
-	private static void askPermission(YoutubeWebView web) {
+	private static void askPermission(FermataWebView web) {
 		try {
 			Context ctx = web.getContext();
 			if (ContextCompat.checkSelfPermission(ctx, Manifest.permission.RECORD_AUDIO) ==

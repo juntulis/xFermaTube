@@ -1093,24 +1093,7 @@ public class YoutubeWebView extends FermataWebView {
 
 	/** „phone“ – ne automobilyje; „usb“ – AA per laidą; „wifi“ – belaidis AA. */
 	String xfConnection() {
-		try {
-			if (!MainActivityDelegate.get(getContext()).isCarActivity()) return "phone";
-			android.content.Context ctx = getContext().getApplicationContext();
-			android.hardware.usb.UsbManager usb =
-					(android.hardware.usb.UsbManager) ctx.getSystemService(android.content.Context.USB_SERVICE);
-			android.hardware.usb.UsbAccessory[] acc = (usb != null) ? usb.getAccessoryList() : null;
-			if ((acc != null) && (acc.length > 0)) return "usb";
-			// Laidu kraunamas automobilyje = AA per laidą (belaidžiu – nekraunamas arba indukcinis kroviklis).
-			android.content.Intent bat = ctx.registerReceiver(null,
-					new android.content.IntentFilter(android.content.Intent.ACTION_BATTERY_CHANGED));
-			int plugged = (bat != null) ? bat.getIntExtra(android.os.BatteryManager.EXTRA_PLUGGED, 0) : 0;
-			if ((plugged == android.os.BatteryManager.BATTERY_PLUGGED_USB) ||
-					(plugged == android.os.BatteryManager.BATTERY_PLUGGED_AC)) return "usb";
-			return "wifi";
-		} catch (Throwable ex) {
-			Log.d(ex, "xF connection type");
-			return "wifi";
-		}
+		return me.aap.fermata.addon.web.XfWebSync.connection(getContext());
 	}
 
 	private void configureAdSkip() {

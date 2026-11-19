@@ -79,6 +79,16 @@ public class FermataChromeClient extends WebChromeClient {
 	}
 
 	@Override
+	public void onReceivedTitle(WebView view, String title) {
+		super.onReceivedTitle(view, title);
+		// xFermaTube: the title of the open tab on the start page
+		if (view.getClass() == FermataWebView.class) {
+			XfWebTabs.titleChanged(view.getUrl(), title);
+			WebToolBarMediator.xfTabsChanged((FermataWebView) view);
+		}
+	}
+
+	@Override
 	public boolean onJsAlert(WebView view, String url, String message, JsResult result) {
 		Context ctx = view.getContext();
 		ActivityDelegate.get(ctx).createDialogBuilder(ctx)
@@ -230,6 +240,8 @@ public class FermataChromeClient extends WebChromeClient {
 
 	protected void setFullScreen(MainActivityDelegate a, boolean fullScreen) {
 		a.setVideoMode(fullScreen, null);
+		// xFermaTube: the car screen hides the address bar while the page's video is fullscreen
+		me.aap.fermata.ui.view.TopBarController.refresh(a);
 	}
 
 	public boolean canEnterFullScreen() {
@@ -284,7 +296,8 @@ public class FermataChromeClient extends WebChromeClient {
 
 	// Fullscreen touch hook; YoutubeChromeClient routes it to the control panel.
 	protected boolean onTouchEvent(View v, MotionEvent event) {
-		return false;
+		// xFermaTube: in a page's fullscreen video a pull down from the top brings the bar back
+		return web.xfPullDownTouch(v, event);
 	}
 
 	@Override
@@ -294,6 +307,11 @@ public class FermataChromeClient extends WebChromeClient {
 
 	@Override
 	public void onGeolocationPermissionsShowPrompt(String origin, GeolocationPermissions.Callback cb) {
+		// xFermaTube: sites of the Web browser never get the app's location (no per-site prompt)
+		if (xfPlainWeb()) {
+			if (cb != null) cb.invoke(origin, false, false);
+			return;
+		}
 		MainActivityDelegate activity = MainActivityDelegate.get(getWebView().getContext());
 		if (BuildConfig.AUTO && activity.isCarActivityNotMirror()) {
 			Context context = getWebView().getContext();
@@ -322,17 +340,29 @@ public class FermataChromeClient extends WebChromeClient {
 		}
 	}
 
+	/** xFermaTube: the plain Web browser (any site), not YouTube or another addon's own view. */
+	private boolean xfPlainWeb() {
+		WebView v = getWebView();
+		return (v != null) && (v.getClass() == FermataWebView.class);
+	}
+
 	@Override
 	public void onPermissionRequest(PermissionRequest request) {
 		Log.d("Permissions requested: ", Arrays.toString(request.getResources()));
 		Map<String, String> perms = new HashMap<>();
 		String[] resources = request.getResources();
+		// xFermaTube: sites of the Web browser never get the microphone or the camera (the app holds
+		// them for the A/V sync check, a site would otherwise inherit them without asking)
+		boolean plain = xfPlainWeb();
 
 		for (String p : resources) {
 			switch (p) {
-				case PermissionRequest.RESOURCE_AUDIO_CAPTURE ->
-						perms.put(Manifest.permission.RECORD_AUDIO, p);
-				case PermissionRequest.RESOURCE_VIDEO_CAPTURE -> perms.put(Manifest.permission.CAMERA, p);
+				case PermissionRequest.RESOURCE_AUDIO_CAPTURE -> {
+					if (!plain) perms.put(Manifest.permission.RECORD_AUDIO, p);
+				}
+				case PermissionRequest.RESOURCE_VIDEO_CAPTURE -> {
+					if (!plain) perms.put(Manifest.permission.CAMERA, p);
+				}
 				case PermissionRequest.RESOURCE_PROTECTED_MEDIA_ID -> {
 					request.grant(new String[]{PermissionRequest.RESOURCE_PROTECTED_MEDIA_ID});
 					return;

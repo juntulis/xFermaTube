@@ -114,7 +114,7 @@ public final class XfKeepDrawing {
 			return true;
 		} catch (Throwable ex) {
 			postFailed = true;
-			android.util.Log.w("xfCar", "keep drawing: input callback unavailable: " + ex);
+			XfLog.w("xfCar", "keep drawing: input callback unavailable: " + ex);
 			return false;
 		}
 	}
@@ -125,7 +125,7 @@ public final class XfKeepDrawing {
 			ticking = true;
 			main.removeCallbacks(tick);
 			main.post(tick);
-			android.util.Log.i("xfCar", "keep drawing: frame keeper on");
+			XfLog.i("xfCar", "keep drawing: frame keeper on");
 		}
 		if (view != null) return;
 		Context app = ctx.getApplicationContext();
@@ -146,9 +146,9 @@ public final class XfKeepDrawing {
 			v.setBackgroundColor(0x01000000);
 			wm.addView(v, lp);
 			view = v;
-			android.util.Log.i("xfCar", "keep drawing: overlay on");
+			XfLog.i("xfCar", "keep drawing: overlay on");
 		} catch (RuntimeException ex) {
-			android.util.Log.w("xfCar", "keep drawing: overlay failed: " + ex);
+			XfLog.w("xfCar", "keep drawing: overlay failed: " + ex);
 		}
 	}
 
@@ -163,7 +163,7 @@ public final class XfKeepDrawing {
 			WindowManager wm = ctx.getApplicationContext().getSystemService(WindowManager.class);
 			if (wm != null) wm.removeViewImmediate(v);
 		} catch (RuntimeException ex) {
-			android.util.Log.w("xfCar", "keep drawing: overlay remove failed: " + ex);
+			XfLog.w("xfCar", "keep drawing: overlay remove failed: " + ex);
 		}
 	}
 }

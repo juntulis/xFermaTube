@@ -9,8 +9,17 @@
   // Delsa, korekcija ir auto jungiklis saugomi atskirai kiekvienam ryšiui, kad auto susireguliuotų greičiau.
   var CONN = window.__xfConn || '';
   var SFX = CONN ? '_' + CONN : '';
+  // Web naršyklė (ne YouTube): programa nustato __xfWeb ir __xfSeed {d, o} – paskutinę žinomą šio ryšio
+  // delsą ir korekciją. Delsa priklauso nuo ryšio (automobilis, USB ar belaidis), ne nuo svetainės, o
+  // localStorage kiekvienai svetainei atskiras, todėl naršyklėje pradinė reikšmė ateina iš programos.
+  var WEB = !!window.__xfWeb;
+  var SEED = (WEB && window.__xfSeed) || null;
   // Senos (bendros) reikšmės tinka tik AA ryšiams; telefone pradedam nuo 0.
   function stored(base) {
+    if (SEED) {
+      if (base === 'xf_video_delay_ms') return String(SEED.d || 0);
+      if (base === 'xf_mic_offset_ms') return String(SEED.o || 0);
+    }
     var v = localStorage.getItem(base + SFX);
     if (v == null && CONN !== 'phone') v = localStorage.getItem(base);
     return v;
@@ -34,8 +43,23 @@
 
   function activeVideo() {
     if (testVid) return testVid;   // sinchronizacijos testo metu vėlinamas testo video
+    if (WEB) return webVideo();
     return (window.__fermataActiveVideo && window.__fermataActiveVideo()) ||
       document.querySelector('video.html5-main-video') || document.querySelector('video');
+  }
+
+  // Svetainėje gali būti keli <video> (reklamos, peržiūros sąraše): imamas grojantis, su garsu ir didžiausias.
+  // Dabartinis turi pirmenybę, kad pasirinkimas nešokinėtų.
+  function webVideo() {
+    var all = document.querySelectorAll('video'), best = null, bestScore = 0;
+    for (var i = 0; i < all.length; i++) {
+      var v = all[i], r = v.getBoundingClientRect(), score = 0.5;   // nematomas: tik jei kito nėra
+      if (r.width >= 2 && r.height >= 2) {
+        score = r.width * r.height * (v.paused ? 1 : 8) * (v.muted || !v.volume ? 1 : 4) * (v === video ? 2 : 1);
+      }
+      if (score > bestScore) { bestScore = score; best = v; }
+    }
+    return best;
   }
 
   function flush() {
@@ -469,9 +493,16 @@
   // originalą. Abi kreivės turi pirmo taško laiką (epochos ms), pagal jį ir sulyginamos.
   // opts.fakeDelayMs – testui be programos: „mikrofonas“ = originalas, uždelstas, su triukšmu ir
   // prasidedantis vėliau (tikrina ir laikų sulyginimą).
-  var JS_XF_MIC = 51, MIC_EXTRA_SEC = 1.5, micCb = null, measGen = 0;
+  var JS_XF_MIC = 51, JS_XF_LOG = 52, MIC_EXTRA_SEC = 1.5, micCb = null, measGen = 0;
 
   // opts.auto – auto režimo matavimas (tylus); opts.onDone(res|null, klaida) – kai baigta.
+  function level(env) {
+    if (!env || !env.length) return '?';
+    var s = 0;
+    for (var i = 0; i < env.length; i++) s += env[i];
+    return String(Math.round(s / env.length * 10000) / 10000);
+  }
+
   function measure(opts) {
     opts = opts || {};
     var fake = opts.fakeDelayMs != null, quiet = !!opts.auto;
@@ -535,6 +566,8 @@
       var dev = micRes.dev || '?';
       if (r.err) { done('🎤 ' + r.err + ' · ' + dev, null, r.err); return; }
       r.mic = dev; r.ts = micRes.ts;
+      // Vidutinis garso lygis: video takelio ir mikrofono (žurnalui: ar mikrofonas išvis girdėjo garsą).
+      r.lv = level(refE) + '/' + level(micRes.env);
       done('🎤 ' + r.ms + ' ms ' + (r.ok ? '✓' : '?') + ' ' + r.conf + ' · ' + dev, r, null);
     }
 
@@ -625,6 +658,13 @@
     return Math.min(AUTO_MAX_MS, AUTO_STABLE_MS * Math.pow(2, Math.min(5, stableN - STABLE_N)));
   }
   var AUTO_RETRY_MS = 10000, CATCH_MISS = 4;   // po CATCH_MISS netinkamų matavimų iš eilės (tyla) – retai
+  // Kai pagauti nepavyksta ilgai (tylus video, triukšmas, uždengtas mikrofonas), bandoma vis rečiau:
+  // 10, 20, 40, 80 s, toliau kas 2 min. Automobilyje 2026-11-18 buvo matuojama kas 10 s daugiau nei 4 min.
+  var AUTO_RETRY_MAX_MS = 2 * 60000;
+  function retryDelay() {
+    if (missN <= CATCH_MISS) return AUTO_GAP_MS;
+    return Math.min(AUTO_RETRY_MAX_MS, AUTO_RETRY_MS * Math.pow(2, Math.min(6, missN - CATCH_MISS - 1)));
+  }
   var VOTE_CONF = 0.4;                         // stipri smailė tinka ir be „ratio“, jei įrašo pusės sutampa
   var FRESH_N = 3;                             // pokyčio kandidatai – tik iš tiek paskutinių bandymų (+ dabartinis)
   var CLEAR_CONF = 0.45, CLEAR_RATIO = 1.8;    // labai aiškus matavimas: dvigubas balsas
@@ -670,6 +710,7 @@
   var autoLog = [];      // paskutiniai auto įvykiai (diagnostikai)
 
   // Žurnalas saugomas ir localStorage (paskutiniai 40 įrašų, su ryšiu), kad vėliau būtų galima perskaityti.
+  // Video pavadinimų ir adresų į žurnalą nerašom: jį žmonės kopijuoja į viešus pranešimus.
   var LOG_KEY = 'xf_auto_log';
   function logAuto(s) {
     var line = new Date().toTimeString().slice(0, 8) + ' ' + s;
@@ -680,11 +721,26 @@
       all.push(new Date().toISOString().slice(5, 10) + ' ' + (CONN || '-') + ' ' + line);
       localStorage.setItem(LOG_KEY, JSON.stringify(all.slice(-40)));
     } catch (e) {}
+    // Ir į programos žurnalą (failas): Settings → App log, išlieka uždarius programą.
+    try { if (window.Fermata && window.Fermata.event) window.Fermata.event(JS_XF_LOG, (CONN || '-') + ' ' + s); } catch (e) {}
+  }
+
+  // Programai pranešama dabartinė delsa ir korekcija: ji jas perduoda Web naršyklės puslapiams (__xfSeed).
+  // Su pauze, nes sklandus perėjimas (ramp) delsą keičia kelis kartus per sekundę.
+  var JS_XF_STATE = 53, stateTimer = 0;
+  function reportState() {
+    clearTimeout(stateTimer);
+    stateTimer = setTimeout(function () {
+      try {
+        if (CONN && window.Fermata && window.Fermata.event) window.Fermata.event(JS_XF_STATE, CONN + ';' + delayMs + ';' + micOffset);
+      } catch (e) {}
+    }, 1500);
   }
 
   function setOffset(v) {
     micOffset = Math.max(-500, Math.min(500, Math.round(v)));
     localStorage.setItem(OFF_KEY, String(micOffset));
+    reportState();
     logAuto('offset ' + micOffset);
     updateLabel();
   }
@@ -732,11 +788,13 @@
     // Smailė pačiame paieškos krašte (0 arba MAX_LAG_MS) – ne smailė, o šlaitas: netinka.
     var edge = !!res && (res.ms <= 0 || res.ms >= MAX_LAG_MS);
     if (!res || edge || !(res.ok || (res.conf >= VOTE_CONF && split))) {
-      logAuto('unreliable: ' + (err || (res ? res.ms + ' ms ' + res.conf + '/' + res.ratio + (edge ? ', edge' : (res.parts && !split ? ', halves differ' : '')) : 'no result')));
       // Patvirtinta delsa nuo vieno nepatikimo matavimo (tyli vieta) nesikeičia, tad ir retinimas nenumušamas.
-      if (!locked) stableN = 0;
-      // Gaudant kartojama iškart, bet ne be galo (tyla, nutildytas garsas): po CATCH_MISS – retai.
-      autoSchedule(locked ? stableInterval() : (++missN <= CATCH_MISS ? AUTO_GAP_MS : AUTO_RETRY_MS));
+      if (!locked) { stableN = 0; missN++; }
+      // Gaudant kartojama iškart, bet ne be galo (tyla, nutildytas garsas): po CATCH_MISS – vis rečiau.
+      var next = locked ? stableInterval() : retryDelay();
+      logAuto('unreliable: ' + (err || (res ? res.ms + ' ms ' + res.conf + '/' + res.ratio + (edge ? ', edge' : (res.parts && !split ? ', halves differ' : '')) + ', level ' + res.lv : 'no result')) +
+        (locked ? ', delay kept' : ', try ' + missN) + ', next in ' + Math.round(next / 100) / 10 + ' s');
+      autoSchedule(next);
       return;
     }
     missN = 0;
@@ -744,7 +802,7 @@
     recent.push({ ms: res.ms, at: now, w: w, n: tryN });
     if (recent.length > POOL_N) recent.shift();
     var grp = near(res.ms, AGREE_MS), W = weight(grp), med = voteMedian(grp), target = clamp(med - micOffset);
-    var tag = '🎤 ' + res.ms + ' (' + res.conf + '/' + res.ratio + (w > 1 ? ', x2' : '') + (res.kept ? ', kept' : '') + (res.ts === false ? ', no ts' : '') + ')';
+    var tag = '🎤 ' + res.ms + ' (' + res.conf + '/' + res.ratio + ', level ' + res.lv + (w > 1 ? ', x2' : '') + (res.kept ? ', kept' : '') + (res.ts === false ? ', no ts' : '') + ')';
 
     // Arti dabartinės delsos: ji patvirtinama, o nuo LOCK_W balsų patikslinama pagal medianą.
     if (Math.abs(med - cur) <= NEAR_MS) {
@@ -824,7 +882,7 @@
   function onPlaying() {
     var wasStalled = stalled;
     stalled = false;
-    if (wasStalled) { stableN = 0; loose = true; logAuto('after stall'); }
+    if (wasStalled) { stableN = 0; missN = 0; loose = true; logAuto('after stall'); }
     autoSchedule(wasStalled ? AUTO_STALL_MS : startDelay());
   }
 
@@ -868,7 +926,8 @@
     // „A“ = auto režimas įjungtas, 🎤 = šiuo metu matuojama.
     var corr = -micOffset;
     if (label) label.textContent = '⏱ ' + delayMs + ' ms' + (corr ? ' (' + (corr > 0 ? '+' : '−') + Math.abs(corr) + ')' : '') +
-      (autoOn && !autoBlocked ? ' A' : '') + (measuring ? ' 🎤' : '') + (testVid ? ' · TEST' : '');
+      (autoOn && !autoBlocked ? ' A' : '') + (measuring ? ' 🎤' : '') + (testVid ? ' · TEST' : '') +
+      (noDelay === 'drm' ? ' · DRM' : noDelay === 'copy' && delayMs > 0 ? ' · off' : '');
     if (autoBtn) autoBtn.classList.toggle('xf-auto-on', autoOn);
     // ±10 pilki tik ranka paleisto 🎤 metu; tylus auto matavimas jų neblokuoja (paspaudus nutraukiamas).
     if (ui) ui.classList.toggle('xf-busy', !!measuring && !measQuiet);
@@ -893,6 +952,11 @@
   function updateDiag() {
     if (!diag || !ui || !ui.classList.contains('xf-open')) return;
     var fmt = audioFmt();
+    // Why the picture is not delayed, in words (the badge shows only "DRM" / "off")
+    var why = noDelay === 'drm' ? 'Protected video (DRM): the picture cannot be delayed' :
+      noDelay === 'copy' ? 'This site does not let the picture be copied: not delayed' :
+      noDelay === 'mse' ? 'Protected video (DRM): picture delayed in the stream, a change shows in ~20 s' : '';
+    if (why) { diag.textContent = why + (CONN ? ' · ' + CONN : ''); return; }
     diag.textContent = (delayMs > 0
       ? stats.capFps + '/' + stats.drawFps + ' fps · ' + stats.bmpMs + ' ms' + (stats.skip ? ' · −' + stats.skip : '')
       : '') + (fmt ? (delayMs > 0 ? ' · ' : '') + fmt : '') + (micOffset ? ' · offs. ' + micOffset : '') +
@@ -939,6 +1003,8 @@
         width: video.offsetWidth, height: video.offsetHeight };
     }
     g.cover = cs.objectFit === 'cover';
+    // Svetainėje sluoksnis lieka video lygyje (ne virš visko), kad svetainės grotuvo mygtukai būtų matomi.
+    if (WEB) canvas.style.setProperty('z-index', cs.zIndex, 'important');
     // Canvas raiška = ekrano pikseliai (devicePixelRatio), bet ne daugiau kaip MAX_W pločio.
     var k = Math.min(window.devicePixelRatio || 1, MAX_W / Math.max(1, g.width));
     g.cw = Math.max(1, Math.round(g.width * k));
@@ -997,6 +1063,7 @@
     pending++;
     createImageBitmap(video, { resizeWidth: w, resizeHeight: h, resizeQuality: 'low' })
       .then(function (bmp) {
+        bmpFail = 0;
         if (pg === pgen) { pending--; pendingAt = performance.now(); }
         st.bmpMs += performance.now() - t0;
         // Pasenęs (po seek) ar ne iš eilės grįžęs kadras: išmetam, kad vaizdas nešokinėtų atgal.
@@ -1005,7 +1072,16 @@
         st.cap++;
         queue.push({ bmp: bmp, t: t, mt: mt });
         while (queue.length > MAX_FRAMES) queue.shift().bmp.close();
-      }, function () { if (pg === pgen) { pending--; pendingAt = performance.now(); } });
+      }, function () {
+        if (pg === pgen) { pending--; pendingAt = performance.now(); }
+        // Svetainės video kadrų nukopijuoti nepavyksta: vėlinimas šiam video išjungiamas, kad ekranas neliktų juodas.
+        if (WEB && !noDelay && ++bmpFail > 60) {
+          noDelay = 'copy';
+          logAuto('frames cannot be copied: picture not delayed');
+          stop();
+          updateLabel();
+        }
+      });
   }
 
   function tickStats(now) {
@@ -1037,6 +1113,12 @@
     // Kol nėra nupiešto kadro, canvas permatomas (matosi originalus video / viršelis).
     if (!shown) setOpacity('0');
 
+    // <video controls>: bakstelėjus sluoksnis trumpam paslėptas (žr. peekUntil).
+    if (peekUntil) {
+      if (performance.now() >= peekUntil) { peekUntil = 0; redraw = true; }
+      else setOpacity('0');
+    }
+
     // Paimam naujausią kadrą, kurio amžius >= delayMs; senesnius išmetam.
     var due = performance.now() - delayMs, pick = null;
     while (queue.length && queue[0].t <= due) {
@@ -1049,6 +1131,7 @@
     } else if (!(redraw && shown)) {
       return;                        // paliekam paskutinį nupieštą kadrą
     }
+    if (peekUntil) return;
     redraw = false;
     pick = shown;
     setOpacity('1');
@@ -1061,8 +1144,41 @@
     ctx.drawImage(pick.bmp, (cw - dw) / 2, (ch - dh) / 2, dw, dh);
   }
 
+  // Svetainėse: noDelay – šio video vėlinti negalima (apsaugotas arba kadrų nepavyksta nukopijuoti).
+  var noDelay = false, bmpFail = 0, drmLook = 0;
+  // <video controls>: naršyklės valdikliai yra paties video viduje ir vėlinimo sluoksnis juos uždengia.
+  // Bakstelėjus video sluoksnis kelioms sekundėms paslepiamas (tuo metu vaizdas nevėlinamas).
+  var peekUntil = 0;
+  if (WEB) {
+    document.addEventListener('pointerdown', function (e) {
+      if (capturing && video && e.target === video && video.controls) peekUntil = performance.now() + 4000;
+    }, true);
+  }
+
   function start() {
-    if (capturing || !video) return;
+    if (capturing || !video || noDelay) return;
+    // Apsaugoto (DRM) video kadrų nukopijuoti negalima: sluoksnis būtų juodas. Jei puslapis video
+    // krauna per MSE, vaizdą vėlina xf-mse-shift.js, perstumdamas vaizdo takelio laiko žymes.
+    // MSE video of a page with DRM is shifted there too (e.g. an advert in the same player): not twice.
+    var mse = WEB && window.__xfMse;
+    var shifted = mse && mse.on() && /^blob:/.test(video.currentSrc || video.src || '');
+    if (WEB && (video.mediaKeys || shifted)) {
+      if (shifted) {
+        noDelay = 'mse';
+        mse.set(delayMs);
+        logAuto('protected video: picture delayed by moving the video timestamps');
+      } else {
+        noDelay = 'drm';
+        if (!drmLook) logAuto('protected video: picture not delayed');
+        // The player may add its buffers a moment later: look again a few times
+        if (drmLook < 5) {
+          drmLook++;
+          setTimeout(function () { if (noDelay === 'drm' && delayMs > 0) { noDelay = false; start(); } }, 2000);
+        }
+      }
+      updateLabel();
+      return;
+    }
     capturing = true;
     canvas.style.display = 'block';
     geomAt = 0; geomKey = '';
@@ -1085,7 +1201,7 @@
   function onSeeked() {
     if (!video || video.paused) return;
     if (!loose) logAuto('after seek');
-    stableN = 0; loose = true;
+    stableN = 0; missN = 0; loose = true;
     autoSchedule(AUTO_STALL_MS);
   }
 
@@ -1094,6 +1210,7 @@
   function newVideo() {
     if (recent.length) logAuto('new video');
     recent = []; stableN = 0; missN = 0; tryN = 0; loose = false; lastOkMeas = null; vidGen++; fastStart = true;
+    noDelay = false; bmpFail = 0; drmLook = 0; peekUntil = 0;
     updateDiag();
   }
 
@@ -1172,7 +1289,9 @@
     },
     set: function (ms) {
       delayMs = Math.max(0, Math.min(3000, Math.round(ms) || 0));
+      if (noDelay === 'mse' && window.__xfMse) window.__xfMse.set(delayMs);
       localStorage.setItem(KEY, String(delayMs));
+      reportState();
       updateLabel();
       if (delayMs > 0) start(); else stop();
       return delayMs;
@@ -1203,6 +1322,7 @@
       placeElements();
       // Programos nustatymas „Show sync badge“: išjungus ženkliukas nerodomas, vėlinimas ir auto veikia toliau.
       if (ui) ui.classList.toggle('xf-off', window.__xfBadge === false);
+      if (WEB && capturing && video.mediaKeys) { stop(); start(); }
       if (delayMs > 0) start();
     }
   };
@@ -1211,7 +1331,7 @@
   // Telefone YouTube sąraše paleidžia nutildytas peržiūras (inline preview): jos bereikalingai dekoduoja video
   // ir eikvoja bateriją, ypač kai tikras video groja automobilyje. Stabdomos tik nutildytos ir tik ne
   // žiūrėjimo puslapyje: įprastas žiūrėjimas ir mini grotuvas telefone nesikeičia.
-  if (CONN === 'phone') {
+  if (CONN === 'phone' && !WEB) {
     document.addEventListener('play', function (e) {
       var v = e.target;
       if (!v || v.tagName !== 'VIDEO' || v === testVid || !v.muted) return;
@@ -1220,6 +1340,9 @@
       try { window.__fermataPauseOk = true; v.pause(); } catch (x) {} finally { window.__fermataPauseOk = false; }
     }, true);
   }
+
+  // YouTube reikšmės jau yra localStorage: programa jas sužino iškart, ne tik po kito pakeitimo.
+  if (!WEB && (delayMs || micOffset)) reportState();
 
   // YouTube yra SPA: video elementas ir fullscreen konteineris keičiasi, todėl periodiškai tikrinam.
   api.attach();

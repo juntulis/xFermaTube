@@ -71,11 +71,11 @@ public final class XfDrawDiag {
 		try {
 			if (decor != null) decor.getViewTreeObserver().addOnDrawListener(drawCb);
 		} catch (RuntimeException ex) {
-			android.util.Log.w("xfDiag", "draw listener: " + ex);
+			XfLog.w("xfDiag", "draw listener: " + ex);
 		}
 		Choreographer.getInstance().postFrameCallback(frameCb);
 		main.postDelayed(tick, 1000);
-		android.util.Log.i("xfDiag", "car screen on" + (verbose ? " (verbose)" : "") + state());
+		XfLog.i("xfDiag", "car screen on" + (verbose ? " (verbose)" : "") + state());
 	}
 
 	public static void stop() {
@@ -89,7 +89,7 @@ public final class XfDrawDiag {
 			if (r != null) r.getViewTreeObserver().removeOnDrawListener(drawCb);
 		} catch (RuntimeException ignore) {
 		}
-		android.util.Log.i("xfDiag", "car screen off");
+		XfLog.i("xfDiag", "car screen off");
 	}
 
 	/** One frame is asked for every second; a second without it means the frames are stopped. */
@@ -104,11 +104,11 @@ public final class XfDrawDiag {
 		if (framePending) {
 			stalled++;
 			if ((stalled == 2) || ((stalled % 60) == 0)) {
-				android.util.Log.w("xfDiag", "car picture: no frames for " + stalled + " s" + state());
+				XfLog.w("xfDiag", "car picture: no frames for " + stalled + " s" + state());
 			}
 		} else {
 			if (stalled >= 2) {
-				android.util.Log.w("xfDiag", "car picture: frames are back after " + stalled + " s" + state());
+				XfLog.w("xfDiag", "car picture: frames are back after " + stalled + " s" + state());
 			}
 			stalled = 0;
 			framePending = true;

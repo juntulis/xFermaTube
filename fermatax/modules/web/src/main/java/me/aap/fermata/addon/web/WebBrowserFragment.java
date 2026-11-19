@@ -40,6 +40,7 @@ import me.aap.fermata.ui.activity.MainActivityDelegate;
 import me.aap.fermata.ui.activity.MainActivityListener;
 import me.aap.fermata.ui.activity.VoiceCommand;
 import me.aap.fermata.ui.fragment.MainActivityFragment;
+import me.aap.fermata.ui.view.TopBarController;
 import me.aap.utils.function.BooleanConsumer;
 import me.aap.utils.function.Supplier;
 import me.aap.utils.log.Log;
@@ -57,7 +58,8 @@ import me.aap.utils.ui.view.ToolBarView;
 @Keep
 @SuppressWarnings("unused")
 public class WebBrowserFragment extends MainActivityFragment
-		implements OverlayMenu.SelectionHandler, MainActivityListener, OpenOnCarRequestHandler {
+		implements OverlayMenu.SelectionHandler, MainActivityListener, OpenOnCarRequestHandler,
+		me.aap.fermata.xf.XfNavigable {
 	private static final long FULLSCREEN_BACK_DUPLICATE_WINDOW_MS = 250L;
 
 	private boolean fullScreenOnResume;
@@ -66,6 +68,8 @@ public class WebBrowserFragment extends MainActivityFragment
 	private long urlSourceGeneration;
 	private FermataWebView urlSourceView;
 	private WebUrlSourceBinding urlBinding;
+	/** xFermaTube: the address bar hidden by its own button (car screen). */
+	private boolean xfBarHidden;
 
 	@Override
 	public int getFragmentId() {
@@ -299,14 +303,22 @@ public class WebBrowserFragment extends MainActivityFragment
 
 	@NonNull
 	protected String getInitialUrl(@NonNull WebBrowserAddon addon) {
+		// xFermaTube: the browser opens with the bookmarks, one tap away
+		if (xfStartPage()) return XfWebSync.START_URL;
 		return addon.getLastUrl();
 	}
 
 	protected boolean hasHomeButton() {
-		return false;
+		return xfStartPage();
 	}
 
 	protected void goHome() {
+		if (xfStartPage()) loadUrl(XfWebSync.START_URL);
+	}
+
+	/** The plain browser (not YouTube, Stremio or TikTok) with the Web program on. */
+	private boolean xfStartPage() {
+		return XfWebSync.startPageEnabled() && (getClass() == WebBrowserFragment.class);
 	}
 
 	protected void registerListeners(MainActivityDelegate a) {
@@ -338,8 +350,11 @@ public class WebBrowserFragment extends MainActivityFragment
 	}
 
 	public void loadUrl(String url) {
+		url = url.trim();
 		if (Uri.parse(url).getScheme() == null) {
-			url = getSearchUrl() + url;
+			// xFermaTube: "web.stremio.com" is an address, "car charging map" a search
+			if (url.matches("[\\w-]+(\\.[\\w-]+)+(:\\d+)?([/?#].*)?")) url = "https://" + url;
+			else url = getSearchUrl() + url;
 		}
 
 		FermataWebView v = getWebView();
@@ -403,6 +418,72 @@ public class WebBrowserFragment extends MainActivityFragment
 			}
 			case PARENT -> false;
 		};
+	}
+
+	// xFermaTube: the side rail of the car screen (the top bar's buttons are small there)
+
+	@Override
+	public void xfHome() {
+		// The start page always has the address bar (a sure way back if the pull down is missed)
+		xfShowBar();
+		goHome();
+	}
+
+	@Override
+	public boolean xfBack() {
+		return onBackPressed();
+	}
+
+	@Override
+	public void xfRefresh() {
+		FermataWebView v = getWebView();
+		if (v != null) v.reloadUserPage();
+	}
+
+	@Override
+	public void xfHistory() {
+	}
+
+	@Override
+	public void xfBookmarks() {
+		getActivityDelegate().getToolBarMenu().show(this::bookmarksMenu);
+	}
+
+	/** The address bar can be hidden: the plain browser on the car screen. */
+	boolean xfCanHideBar() {
+		return xfStartPage() && getActivityDelegate().isCarActivity();
+	}
+
+	/** Hides the address bar (its own button); a pull down from the top brings it back. */
+	void xfHideBar() {
+		if (!xfCanHideBar()) return;
+		xfBarHidden = true;
+		TopBarController.refresh(getActivityDelegate(), this);
+	}
+
+	/**
+	 * Brings the hidden address bar back (a pull down from the top), leaving the page's fullscreen
+	 * video too. false = the bar is shown already.
+	 */
+	boolean xfShowBar() {
+		if (!xfCanHideBar()) return false;
+		FermataWebView v = getWebView();
+		FermataChromeClient chrome = (v == null) ? null : v.getWebChromeClient();
+		boolean full = (chrome != null) && chrome.isFullScreen();
+		if (!xfBarHidden && !full) return false;
+		xfBarHidden = false;
+		if (full) chrome.exitFullScreen();
+		TopBarController.refresh(getActivityDelegate(), this);
+		return true;
+	}
+
+	@Override
+	public boolean xfFullScreen() {
+		if (!xfCanHideBar()) return false;
+		if (xfBarHidden) return true;
+		FermataWebView v = getWebView();
+		FermataChromeClient chrome = (v == null) ? null : v.getWebChromeClient();
+		return (chrome != null) && chrome.isFullScreen();
 	}
 
 	@Override
@@ -508,11 +589,38 @@ public class WebBrowserFragment extends MainActivityFragment
 		WebBrowserAddon a = getAddon();
 		if (a == null) return;
 
+		Map<String, String> all = a.getBookmarks();
+		FermataWebView v = getWebView();
+		String url = (v == null) ? null : v.getUrl();
+
+		// xFermaTube: one tap bookmarks the open page under its title, no form to fill in on the car
+		// screen. The list is shown again, so that the new bookmark is seen (toasts don't reach the car).
+		if ((url != null) && (url.startsWith("https://") || url.startsWith("http://"))) {
+			if (all.containsKey(url)) {
+				b.addItem(me.aap.fermata.R.id.bookmark_remove, me.aap.fermata.R.string.xf_bookmark_remove)
+						.setHandler(item -> {
+							a.removeBookmark(url);
+							item.getMenu().show(this::bookmarksMenu);
+							return true;
+						});
+			} else {
+				String title = v.getTitle();
+				String name = ((title == null) || title.trim().isEmpty()) ? url : title.trim();
+				String shortName = (name.length() > 60) ? name.substring(0, 60) + "…" : name;
+				b.addItem(me.aap.fermata.R.id.xf_bookmark_add, me.aap.fermata.R.string.xf_bookmark_add)
+						.setHandler(item -> {
+							a.addBookmark(shortName, url);
+							item.getMenu().show(this::bookmarksMenu);
+							return true;
+						});
+			}
+		}
+
 		b.addItem(me.aap.fermata.R.id.bookmark_create, me.aap.fermata.R.string.create_bookmark)
 				.setSubmenu(this::createBookmark);
 		int i = 0;
 
-		for (Map.Entry<String, String> e : a.getBookmarks().entrySet()) {
+		for (Map.Entry<String, String> e : all.entrySet()) {
 			b.addItem(UiUtils.getArrayItemId(i++), e.getValue()).setData(e.getKey())
 					.setHandler(this::bookmarkSelected);
 		}

@@ -566,7 +566,8 @@ public class SettingsFragment extends MainActivityFragment
 			});
 			set.addButton(o -> {
 				o.title = R.string.xf_update_check_now;
-				o.csubtitle = ctx.getString(R.string.xf_update_check_now_sub, me.aap.fermata.xf.XfConfig.RELEASE);
+				// The version is shown once, in the Version row below
+				o.subtitle = R.string.xf_update_check_now_sub;
 				o.onClick = () -> me.aap.fermata.xf.XfUpdate.checkNow(a);
 			});
 			if (me.aap.fermata.xf.XfKeepDrawing.needed()) set.addButton(o -> {
@@ -579,6 +580,11 @@ public class SettingsFragment extends MainActivityFragment
 				o.title = R.string.xf_aa_check;
 				o.subtitle = R.string.xf_aa_check_sub;
 				o.onClick = () -> me.aap.fermata.xf.XfInstallReport.show(a);
+			});
+			set.addButton(o -> {
+				o.title = R.string.xf_log;
+				o.subtitle = R.string.xf_log_sub;
+				o.onClick = () -> me.aap.fermata.xf.XfLog.show(a);
 			});
 			if (me.aap.fermata.xf.XfInstallFix.offered(a.getContext()) &&
 					me.aap.fermata.xf.XfInstallFix.available(a.getContext())) {

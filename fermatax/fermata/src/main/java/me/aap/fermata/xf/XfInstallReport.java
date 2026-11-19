@@ -5,8 +5,6 @@ import static android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_ENABLED;
 import static android.content.pm.PackageManager.PERMISSION_GRANTED;
 
 import android.Manifest;
-import android.content.ClipData;
-import android.content.ClipboardManager;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -44,64 +42,17 @@ public final class XfInstallReport {
 	public static void show(MainActivityDelegate a) {
 		Context ctx = a.getContext();
 		String text = build(ctx);
-		// Three buttons at most: unless the install record is good, "Fix now" takes the place of Close
+		// Copy and Share are in the row on top of the text
 		boolean fix = XfInstallFix.offered(ctx) && XfInstallFix.available(ctx);
 		try {
-			a.createDialogBuilder()
+			var b = a.createDialogBuilder()
 					.setTitle(R.string.xf_aa_check)
-					.setView(reportView(ctx, text))
-					.setNegativeButton(fix ? R.string.xf_fix_now : R.string.xf_close,
-							fix ? (d, w) -> XfInstallFix.open(ctx) : null)
-					.setNeutralButton(R.string.xf_share, (d, w) -> share(ctx, text))
-					.setPositiveButton(android.R.string.copy, (d, w) -> copy(ctx, text))
-					.show();
+					.setView(XfLog.textView(ctx, text, R.string.xf_aa_check, false))
+					.setNegativeButton(R.string.xf_close, null);
+			if (fix) b.setPositiveButton(R.string.xf_fix_now, (d, w) -> XfInstallFix.open(ctx));
+			b.show();
 		} catch (RuntimeException ex) {
 			Log.e(ex, "Failed to show the install report");
-		}
-	}
-
-	/** Copy on top: the report is long and the dialog buttons are only reachable after scrolling. */
-	private static android.view.View reportView(Context ctx, String text) {
-		float dp = ctx.getResources().getDisplayMetrics().density;
-		int pad = Math.round(20 * dp);
-		android.widget.LinearLayout root = new android.widget.LinearLayout(ctx);
-		root.setOrientation(android.widget.LinearLayout.VERTICAL);
-		root.setPadding(pad, Math.round(8 * dp), pad, 0);
-		android.widget.Button copyBtn = new android.widget.Button(ctx);
-		copyBtn.setText(android.R.string.copy);
-		copyBtn.setOnClickListener(v -> {
-			copy(ctx, text);
-			android.widget.Toast.makeText(ctx, android.R.string.copy, android.widget.Toast.LENGTH_SHORT).show();
-		});
-		root.addView(copyBtn, new android.widget.LinearLayout.LayoutParams(
-				android.view.ViewGroup.LayoutParams.WRAP_CONTENT, android.view.ViewGroup.LayoutParams.WRAP_CONTENT));
-		android.widget.ScrollView scroll = new android.widget.ScrollView(ctx);
-		android.widget.TextView tv = new android.widget.TextView(ctx);
-		tv.setText(text);
-		tv.setTextIsSelectable(true);
-		scroll.addView(tv);
-		root.addView(scroll, new android.widget.LinearLayout.LayoutParams(
-				android.view.ViewGroup.LayoutParams.MATCH_PARENT, android.view.ViewGroup.LayoutParams.WRAP_CONTENT));
-		return root;
-	}
-
-	private static void copy(Context ctx, String text) {
-		try {
-			ClipboardManager cm = (ClipboardManager) ctx.getSystemService(Context.CLIPBOARD_SERVICE);
-			if (cm != null) cm.setPrimaryClip(ClipData.newPlainText("xFermaTube", text));
-		} catch (RuntimeException ex) {
-			Log.e(ex, "Failed to copy the install report");
-		}
-	}
-
-	private static void share(Context ctx, String text) {
-		try {
-			Intent send = new Intent(Intent.ACTION_SEND).setType("text/plain")
-					.putExtra(Intent.EXTRA_TEXT, text);
-			ctx.startActivity(Intent.createChooser(send, ctx.getText(R.string.xf_aa_check))
-					.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
-		} catch (RuntimeException ex) {
-			Log.e(ex, "Failed to share the install report");
 		}
 	}
 
@@ -219,6 +170,9 @@ public final class XfInstallReport {
 		b.append("\nNot readable by the app, check by hand: Android Auto settings > Developer " +
 				"settings > Unknown sources must be ticked.\n");
 		lastCrash(ctx, b);
+		String appLog = XfLog.read(ctx, 80);
+		b.append("\nApp log (last lines; all of it: Settings > App log)\n")
+				.append(appLog.isEmpty() ? "(empty)\n" : appLog);
 		recentLog(b);
 		return b.toString();
 	}

@@ -64,7 +64,7 @@ public final class TopBarController {
 	/** Applies the fragment-wide chrome rule after a mediator restores its own visibility. */
 	public static boolean applyVisibility(ToolBarView toolBar, ActivityFragment fragment) {
 		MainActivityDelegate activity = MainActivityDelegate.get(toolBar.getContext());
-		int visibility = me.aap.fermata.xf.XfConfig.hideYoutubeTopBar(activity, fragment.getFragmentId())
+		int visibility = me.aap.fermata.xf.XfConfig.hideTopBar(activity, fragment)
 				? View.GONE : TopBarPolicy.resolveTopBarVisibility(
 				fragment.getFragmentId(), activity.isBarsHidden());
 		if (toolBar.getVisibility() != visibility) toolBar.setVisibility(visibility);

@@ -122,6 +122,7 @@ public class FermataWebView extends WebView
 	private boolean clearingExternalPlayback;
 	private boolean clearExternalHistoryOnLoad;
 	private java.lang.ref.WeakReference<WebBrowserFragment> sourceFragment;
+	private final XfPullDown xfPull = new XfPullDown();
 	private boolean explicitUserLoad;
 	private final WebUrlDestination mirroredDestination = new WebUrlDestination();
 	private boolean mirroredPage;
@@ -183,6 +184,8 @@ public class FermataWebView extends WebView
 		if (getClass() == FermataWebView.class) {
 			genericAudioBridge = new GenericWebAudioBridge(this);
 			genericAudioBridge.install();
+			// xFermaTube: picture delay for DRM video on the car screen (before the page's player starts)
+			XfWebSync.installShift(this, isCar);
 		}
 
 		setDesktopMode(addon, false);
@@ -527,6 +530,7 @@ public class FermataWebView extends WebView
 
 	protected void pageLoaded(String uri) {
 		addFocusHighlight();
+		XfWebSync.pageLoaded(this);
 		if (genericAudioBridge != null) genericAudioBridge.onPageLoaded(uri);
 		if (mirroredPage) { updateWebToolbar(uri); return; }
 		if (externalPlayback != null) {
@@ -687,6 +691,26 @@ public class FermataWebView extends WebView
 		return false;
 	}
 
+	@Override
+	public boolean dispatchTouchEvent(MotionEvent event) {
+		if (!xfPullDownTouch(this, event)) return super.dispatchTouchEvent(event);
+		// The pull brought the address bar back: the page's own gesture ends here
+		if (event.getActionMasked() == MotionEvent.ACTION_MOVE) {
+			MotionEvent c = MotionEvent.obtain(event);
+			c.setAction(MotionEvent.ACTION_CANCEL);
+			super.dispatchTouchEvent(c);
+			c.recycle();
+		}
+		return true;
+	}
+
+	/** xFermaTube: a pull down from the top edge brings the hidden address bar back (car, Web). */
+	boolean xfPullDownTouch(View v, MotionEvent event) {
+		if (!isCar()) return false;
+		WebBrowserFragment f = getSourceFragment();
+		return (f != null) && xfPull.onTouch(v, event, f::xfShowBar);
+	}
+
 	@SuppressLint("ClickableViewAccessibility")
 	@Override
 	public boolean onTouchEvent(MotionEvent event) {
@@ -830,7 +854,7 @@ public class FermataWebView extends WebView
 		return super.onInterceptTouchEvent(ev);
 	}
 
-	private FutureSupplier<MainActivityDelegate> getActivity() {
+	FutureSupplier<MainActivityDelegate> getActivity() {
 		return MainActivityDelegate.getActivityDelegate(getContext());
 	}
 

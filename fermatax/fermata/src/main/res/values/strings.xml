@@ -32,13 +32,19 @@ Android Auto cannot show this request on the car screen, so it is asked here.</s
     <string name="xf_aa_check" translatable="false">Android Auto install check</string>
     <string name="xf_aa_check_sub" translatable="false">Shows how the app was installed. Use it when Android Auto shows only the audio entry.</string>
     <string name="xf_share" translatable="false">Share</string>
+    <string name="xf_copied" translatable="false">Copied</string>
+    <string name="xf_bookmark_add" translatable="false">Bookmark this page</string>
+    <string name="xf_bookmark_remove" translatable="false">Remove this page from bookmarks</string>
+    <string name="xf_log" translatable="false">App log</string>
+    <string name="xf_log_sub" translatable="false">What the app did lately: car screen, sync measurements, problems. Copy it when you report a problem.</string>
+    <string name="xf_log_clear" translatable="false">Clear</string>
     <string name="xf_close" translatable="false">Close</string>
     <string name="xf_sync_section" translatable="false">Sound and picture sync</string>
     <string name="xf_install_section" translatable="false">Install and updates</string>
     <string name="xf_update_check" translatable="false">Check for updates</string>
     <string name="xf_update_check_sub" translatable="false">Once a day, when the app is opened on the phone, asks GitHub if a newer xFermaTube is out. Nothing is sent except the request itself.</string>
     <string name="xf_update_check_now" translatable="false">Check for updates now</string>
-    <string name="xf_update_check_now_sub" translatable="false">This is version %1$s.</string>
+    <string name="xf_update_check_now_sub" translatable="false">Asks GitHub right away.</string>
     <string name="xf_update_checking" translatable="false">Checking for updates…</string>
     <string name="xf_update_none" translatable="false">You have the latest version (%1$s).</string>
     <string name="xf_update_failed" translatable="false">Update check failed (%1$s).</string>

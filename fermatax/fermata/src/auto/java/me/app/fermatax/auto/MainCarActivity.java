@@ -197,7 +197,7 @@ public class MainCarActivity extends CarActivity implements FermataActivity {
 
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
-		android.util.Log.i("xfDiag", "car onCreate " + System.identityHashCode(this) + " state=" +
+		me.aap.fermata.xf.XfLog.i("xfDiag", "car onCreate " + System.identityHashCode(this) + " state=" +
 				(savedInstanceState != null) + " uiMode=" + getResources().getConfiguration().uiMode);
 		currentInstance = this;
 		MainActivityDelegate.setTheme(this, true);
@@ -319,17 +319,17 @@ public class MainCarActivity extends CarActivity implements FermataActivity {
 		super.onStart();
 		MainActivityDelegate d = createdDelegate;
 		if (d != null) d.onHostForegrounded();
-		android.util.Log.i("xfDiag", "car onStart " + System.identityHashCode(this));
+		me.aap.fermata.xf.XfLog.i("xfDiag", "car onStart " + System.identityHashCode(this));
 		try {
 			me.aap.fermata.xf.XfDrawDiag.start(getContext(), getWindow().getDecorView());
 		} catch (Throwable t) {
-			android.util.Log.w("xfDiag", "diag start: " + t);
+			me.aap.fermata.xf.XfLog.w("xfDiag", "diag start: " + t);
 		}
 	}
 
 	@Override
 	public void onStop() {
-		android.util.Log.i("xfDiag", "car onStop " + System.identityHashCode(this));
+		me.aap.fermata.xf.XfLog.i("xfDiag", "car onStop " + System.identityHashCode(this));
 		super.onStop();
 	}
 
@@ -368,7 +368,7 @@ public class MainCarActivity extends CarActivity implements FermataActivity {
 			me.aap.fermata.xf.XfKeepDrawing.stop(getContext());
 			me.aap.fermata.xf.XfDrawDiag.stop();
 		}
-		android.util.Log.i("xfDiag", "car onDestroy " + System.identityHashCode(this));
+		me.aap.fermata.xf.XfLog.i("xfDiag", "car onDestroy " + System.identityHashCode(this));
 		DiagnosticsObserver.activity(DiagnosticsObserver.ActivityEvent.DESTROYED, diagnosticsActivityId);
 		super.onDestroy();
 		MainActivityDelegate d = createdDelegate;
@@ -400,7 +400,7 @@ public class MainCarActivity extends CarActivity implements FermataActivity {
 	@Override
 	public void onConfigurationChanged(Configuration configuration) {
 		Log.i("Configuration changed: ", configuration);
-		android.util.Log.i("xfDiag", "car onConfigurationChanged uiMode=" + configuration.uiMode +
+		me.aap.fermata.xf.XfLog.i("xfDiag", "car onConfigurationChanged uiMode=" + configuration.uiMode +
 				" dpi=" + configuration.densityDpi);
 		super.onConfigurationChanged(configuration);
 	}

@@ -71,6 +71,8 @@ public class GlassNavigationRailView extends FrameLayout {
     private FrameLayout innerGrabberPill;
     private ImageView ivLauncher;
     private View[] actionButtons;
+    private int[][] xfGroups;    // xFermata: the button groups (indexes of actionButtons), a line is drawn between them
+    private android.graphics.Paint xfLinePaint;
 
     private final Handler autoHideHandler = new Handler(Looper.getMainLooper());
     private final Runnable autoHideRunnable = this::collapse;
@@ -147,7 +149,13 @@ public class GlassNavigationRailView extends FrameLayout {
 
         // 2. Rail Container (Floating overlay with high-opacity frosted glass)
         int railWidth = GlassDimensions.dpToPx(context, 76);
-        railContainer = new LinearLayout(context);
+        railContainer = new LinearLayout(context) {
+            @Override
+            protected void dispatchDraw(android.graphics.Canvas canvas) {
+                super.dispatchDraw(canvas);
+                xfDrawGroupLines(this, canvas);
+            }
+        };
         railContainer.setOrientation(LinearLayout.VERTICAL);
         railContainer.setGravity(Gravity.CENTER_HORIZONTAL);
         railContainer.setBackground(GlassDrawables.createGlassRailDrawable(context, GlassDimensions.CARD_RADIUS_DP, isNight));
@@ -299,15 +307,18 @@ public class GlassNavigationRailView extends FrameLayout {
     private void buildActionButtons(Context context) {
         railContainer.removeAllViews();
         boolean xf = me.aap.fermata.xf.XfConfig.YOUTUBE_ONLY;
-        // xFermata: [5] Atgal, [6] Perkrauti, [7] Istorija (0–4 indeksai nesikeičia, juos naudoja updateSelectedRoute)
-        actionButtons = new View[xf ? 8 : 5];
+        // xFermata: [5] Back, [6] Refresh, [7] History (YouTube's), [8] Web, [9] Bookmarks (Web's)
+        // (0–4 keep their places, updateSelectedRoute uses them)
+        actionButtons = new View[xf ? 10 : 5];
 
-        // Button 1: Home
-        actionButtons[0] = createButton(context, R.drawable.home, R.string.home, false, () -> {
+        // Button 1: Home. xFermata: the YouTube program
+        actionButtons[0] = createButton(context, xf ? R.drawable.youtube : R.drawable.home,
+                xf ? "YouTube" : safeGetString(context, R.string.home, "Home"), false, () -> {
             if (activity == null) return;
-            // xFermata: „Home“ = YouTube. Jau YouTube'e – pradžios puslapis; kitur (nustatymuose) – grįžta į YouTube.
             if (xf) {
-                if (activity.getActiveFragment() instanceof me.aap.fermata.xf.XfNavigable n) n.xfHome();
+                // Already in YouTube: its home page. Elsewhere (Web, settings): back to YouTube.
+                if (xfIsActive(R.id.youtube_fragment) &&
+                        (activity.getActiveFragment() instanceof me.aap.fermata.xf.XfNavigable n)) n.xfHome();
                 else activity.showPrimaryRoot();
             } else {
                 activity.showFragment(R.id.dashboard_fragment);
@@ -315,7 +326,7 @@ public class GlassNavigationRailView extends FrameLayout {
         });
 
         if (xf) {
-            // Viršutinė juosta su „Atgal“ ir „Perkrauti“ automobilyje paslėpta, todėl jie čia.
+            // The top bar with Back and Refresh is hidden on the car screen, so they are here.
             actionButtons[5] = createButton(context, R.drawable.ic_arrow_back, R.string.xf_back, false, () -> {
                 if (activity == null) return;
                 if (activity.getActiveFragment() instanceof me.aap.fermata.xf.XfNavigable n) n.xfBack();
@@ -325,18 +336,26 @@ public class GlassNavigationRailView extends FrameLayout {
                 if ((activity != null) && (activity.getActiveFragment() instanceof me.aap.fermata.xf.XfNavigable n))
                     n.xfRefresh();
             });
-            actionButtons[7] = createButton(context, R.drawable.xf_history, R.string.xf_history, false, () -> {
+            // Each program's own action stays right under the program: YouTube's watch history,
+            // Web's bookmarks. From elsewhere the program is opened first.
+            actionButtons[7] = createButton(context, R.drawable.xf_history, R.string.xf_history, false,
+                    () -> xfProgramAction(false));
+            actionButtons[9] = createButton(context, R.drawable.bookmark, R.string.bookmarks, false,
+                    () -> xfProgramAction(true));
+            // The Web program: a browser for other video sites
+            actionButtons[8] = createButton(context, R.drawable.web, "Web", false, () -> {
                 if (activity == null) return;
-                if (activity.getActiveFragment() instanceof me.aap.fermata.xf.XfNavigable n) {
-                    n.xfHistory();
-                } else {
-                    // Iš nustatymų: pirma grįžtam į YouTube, tada atidarom istoriją
-                    activity.showPrimaryRoot();
-                    postDelayed(() -> {
-                        if (activity.getActiveFragment() instanceof me.aap.fermata.xf.XfNavigable n) n.xfHistory();
-                    }, 400);
+                // Already in Web: its start page with the bookmarks
+                if (xfIsActive(R.id.web_browser_fragment)) {
+                    if (activity.getActiveFragment() instanceof me.aap.fermata.xf.XfNavigable n) n.xfHome();
+                    return;
                 }
+                xfShowWeb();
             });
+            if (!me.aap.fermata.xf.XfConfig.WEB_PROTO) {
+                actionButtons[8].setVisibility(GONE);
+                actionButtons[9].setVisibility(GONE);
+            }
         }
 
         // Button 2: Voice
@@ -365,12 +384,85 @@ public class GlassNavigationRailView extends FrameLayout {
         // xFermata: Android Auto programos keičiamos per AA, išėjimo mygtuko nereikia
         if (xf) actionButtons[4].setVisibility(GONE);
 
-        // Tvarka juostoje: Home, (Istorija, Atgal, Perkrauti), Voice, Apps, Settings, Exit
-        int[] order = xf ? new int[]{0, 7, 5, 6, 1, 2, 3, 4} : new int[]{0, 1, 2, 3, 4};
-        for (int i : order) {
-            railContainer.addView(actionButtons[i]);
+        xfGroups = null;
+        if (xf) {
+            // Three groups with a line between them (see xfDrawGroupLines), so it is clear what belongs
+            // to what: YouTube with its History | Web with its Bookmarks | what works everywhere
+            // (Back, Refresh, Settings)
+            xfGroups = new int[][]{{0, 7}, {8, 9}, {5, 6, 1, 2, 3, 4}};
+            for (int[] group : xfGroups) {
+                for (int i : group) railContainer.addView(actionButtons[i]);
+            }
+        } else {
+            for (View b : actionButtons) railContainer.addView(b);
         }
         updateSelectedRoute();
+    }
+
+    /** History (YouTube) or Bookmarks (Web): in its program, or the program is opened first. */
+    private void xfProgramAction(boolean web) {
+        if (activity == null) return;
+        int program = web ? R.id.web_browser_fragment : R.id.youtube_fragment;
+        if (xfIsActive(program)) {
+            xfDoProgramAction(web);
+            return;
+        }
+        if (web) xfShowWeb();
+        else activity.showPrimaryRoot();
+        postDelayed(() -> {
+            if ((activity != null) && xfIsActive(program)) xfDoProgramAction(web);
+        }, 400);
+    }
+
+    private void xfDoProgramAction(boolean web) {
+        if (!(activity.getActiveFragment() instanceof me.aap.fermata.xf.XfNavigable n)) return;
+        if (web) n.xfBookmarks();
+        else n.xfHistory();
+    }
+
+    private boolean xfIsActive(int fragmentId) {
+        ActivityFragment f = (activity == null) ? null : activity.getActiveFragment();
+        return (f != null) && (f.getFragmentId() == fragmentId);
+    }
+
+    private void xfShowWeb() {
+        me.aap.fermata.addon.AddonManager mgr =
+                me.aap.fermata.FermataApplication.get().getAddonManager();
+        me.aap.fermata.addon.AddonInfo web = mgr.getAddonInfo(R.id.web_browser_fragment);
+        if (web != null) mgr.ensureEnabled(web);
+        // Not showFragment(): right after enabling, the addon isn't loaded yet and
+        // its fragment can't be created ("Invalid fragment id" crash on the car screen).
+        activity.showFragmentWhenReady(R.id.web_browser_fragment);
+    }
+
+    /**
+     * A thin line in the gap between two groups of buttons. Drawn by the container and not added
+     * as a view: the buttons keep all of the height and stay the only children of the rail.
+     */
+    private void xfDrawGroupLines(View container, android.graphics.Canvas canvas) {
+        if ((xfGroups == null) || (actionButtons == null)) return;
+        if (xfLinePaint == null) {
+            xfLinePaint = new android.graphics.Paint();
+            xfLinePaint.setStrokeWidth(Math.max(1, GlassDimensions.dpToPx(getContext(), 1)));
+        }
+        xfLinePaint.setColor((colors.getTextPrimary() & 0x00FFFFFF) | 0x50000000);
+        int inset = GlassDimensions.dpToPx(getContext(), 14);
+        View above = null;
+        for (int[] group : xfGroups) {
+            View first = null, last = null;
+            for (int i : group) {
+                View b = ((i < actionButtons.length) ? actionButtons[i] : null);
+                if ((b == null) || (b.getVisibility() != VISIBLE) || (b.getParent() != container)) continue;
+                if (first == null) first = b;
+                last = b;
+            }
+            if (first == null) continue;
+            if (above != null) {
+                float y = (above.getBottom() + first.getTop()) / 2f;
+                canvas.drawLine(inset, y, container.getWidth() - inset, y, xfLinePaint);
+            }
+            above = last;
+        }
     }
 
     private static String safeGetString(Context context, int resId, String fallback) {
@@ -505,12 +597,13 @@ public class GlassNavigationRailView extends FrameLayout {
         actionButtons[2].setSelected(activeId == R.id.glass_addons_catalog_fragment);
         actionButtons[3].setSelected(activeId == R.id.settings_fragment);
         actionButtons[4].setSelected(false);
-        // xFermata: „Refresh“ veikia tik YouTube puslapyje; nustatymuose jis pritemdytas ir nespaudžiamas.
-        if ((actionButtons.length > 6) && (actionButtons[6] != null)) {
-            boolean web = frag instanceof me.aap.fermata.xf.XfNavigable;
-            actionButtons[6].setEnabled(web);
-            actionButtons[6].setAlpha(web ? 1f : 0.35f);
-        }
+        if (actionButtons.length < 10) return;
+        // xFermata: Refresh works on a page (YouTube, Web); in settings it is dimmed and not clickable.
+        boolean page = frag instanceof me.aap.fermata.xf.XfNavigable;
+        actionButtons[6].setEnabled(page);
+        actionButtons[6].setAlpha(page ? 1f : 0.35f);
+        // The open program is highlighted (YouTube above, Web here)
+        actionButtons[8].setSelected(activeId == R.id.web_browser_fragment);
     }
 
     @Override

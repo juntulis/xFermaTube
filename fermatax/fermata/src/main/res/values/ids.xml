@@ -143,6 +143,7 @@
     <item name="bookmarks" type="id" />
     <item name="bookmark_select" type="id" />
     <item name="bookmark_create" type="id" />
+    <item name="xf_bookmark_add" type="id" />
     <item name="bookmark_remove" type="id" />
     <item name="bookmark_remove_all" type="id" />
     <item name="bookmark_remove_all_confirm" type="id" />

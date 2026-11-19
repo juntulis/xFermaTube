@@ -52,12 +52,12 @@ public final class XfCarContext extends ContextWrapper {
 			ctx.inflater = li;
 			Configuration h = hr.getConfiguration();
 			Configuration c = car.getConfiguration();
-			android.util.Log.i("xfCar", "car layout: host says " + h.densityDpi + "dpi w" +
+			XfLog.i("xfCar", "car layout: host says " + h.densityDpi + "dpi w" +
 					h.screenWidthDp + " orient " + h.orientation + ", car is " + c.densityDpi + "dpi w" +
 					c.screenWidthDp + " orient " + c.orientation + ": using the car's");
 			return li;
 		} catch (Throwable ex) {
-			android.util.Log.w("xfCar", "car layout: wrapper failed: " + ex);
+			XfLog.w("xfCar", "car layout: wrapper failed: " + ex);
 			return host;
 		}
 	}

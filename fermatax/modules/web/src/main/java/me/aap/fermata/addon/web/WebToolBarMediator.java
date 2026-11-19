@@ -10,8 +10,18 @@ import static androidx.constraintlayout.widget.ConstraintLayout.LayoutParams.LEF
 import static java.util.Objects.requireNonNull;
 import static me.aap.fermata.util.Utils.dynCtx;
 
+import static android.view.ViewGroup.LayoutParams.MATCH_PARENT;
+
+import android.content.Context;
+import android.graphics.Typeface;
+import android.graphics.drawable.GradientDrawable;
+import android.graphics.drawable.InsetDrawable;
+import android.util.TypedValue;
+import android.view.Gravity;
 import android.view.KeyEvent;
+import android.view.View;
 import android.widget.EditText;
+import android.widget.TextView;
 
 import androidx.constraintlayout.widget.ConstraintLayout;
 
@@ -38,7 +48,8 @@ public class WebToolBarMediator implements ToolBarView.Mediator {
 		WebBrowserFragment b = (WebBrowserFragment) f;
 		EditText t = createAddress(tb, b);
 		String url = b.getUrl();
-		if (url != null) t.setText(url);
+		if (url != null) t.setText(xfShownAddress(url));
+		if (b.xfCanHideBar()) t.setHint("Search or type a web address");
 		addView(tb, t, R.id.browser_addr, LEFT);
 		int backSide = TopBarMediatorSupport.getBackButtonSide(tb);
 		addButton(tb, R.drawable.forward, v ->
@@ -47,7 +58,11 @@ public class WebToolBarMediator implements ToolBarView.Mediator {
 			addButton(tb, me.aap.fermata.R.drawable.home, v -> b.goHome(), R.id.browser_home, backSide);
 		}
 		TopBarMediatorSupport.installBackButton(tb, this);
+		// xFermaTube: car screen – the number of open pages (tabs); a tap shows them (the start page)
+		if (b.xfCanHideBar()) xfAddTabCount(tb, b, t.getCurrentTextColor());
 		addButton(tb, R.drawable.clear, v -> t.setText(""), R.id.browser_addr_clear);
+		// xFermaTube: car screen – hide this bar for the page (a pull down from the top brings it back)
+		if (b.xfCanHideBar()) addButton(tb, R.drawable.fullscreen, v -> b.xfHideBar(), R.id.fullscreen);
 		addButton(tb, me.aap.fermata.R.drawable.bookmark_filled, v ->
 				onBookmarksButtonClick(b), me.aap.fermata.R.id.bookmarks);
 		FermataWebView wv = b.getWebView();
@@ -62,7 +77,51 @@ public class WebToolBarMediator implements ToolBarView.Mediator {
 
 	public void setAddress(ToolBarView tb, String addr) {
 		EditText et = tb.findViewById(R.id.browser_addr);
-		if (et != null) et.setText(addr);
+		if (et != null) et.setText(xfShownAddress(addr));
+		xfSetTabCount(tb.findViewById(R.id.browser_tabs));
+	}
+
+	/** xFermaTube: the start page shows an empty address line (with a hint), like Chrome. */
+	private static String xfShownAddress(String addr) {
+		return ((addr != null) && XfWebSync.isStartPage(addr)) ? "" : addr;
+	}
+
+	/** xFermaTube: a Chrome-like [N] button – the number of open pages, a tap shows them. */
+	private void xfAddTabCount(ToolBarView tb, WebBrowserFragment b, int color) {
+		Context ctx = tb.getContext();
+		TextView c = new TextView(ctx);
+		ConstraintLayout.LayoutParams lp = setLayoutParams(c, 0, MATCH_PARENT);
+		lp.horizontalWeight = 1;
+		lp.dimensionRatio = "1:1";
+		c.setGravity(Gravity.CENTER);
+		c.setTextColor(color);
+		c.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+		c.setTypeface(Typeface.DEFAULT_BOLD);
+		c.setIncludeFontPadding(false);
+		GradientDrawable box = new GradientDrawable();
+		box.setCornerRadius(UiUtils.toPx(ctx, 4));
+		box.setStroke(UiUtils.toIntPx(ctx, 2), color);
+		int in = UiUtils.toIntPx(ctx, 12);
+		c.setBackground(new InsetDrawable(box, in));
+		c.setContentDescription("Open pages");
+		c.setFocusable(true);
+		c.setOnClickListener(v -> b.goHome());
+		addView(tb, c, R.id.browser_tabs);
+		xfSetTabCount(c);
+	}
+
+	private static void xfSetTabCount(View v) {
+		if (v instanceof TextView c) c.setText(String.valueOf(XfWebTabs.list().size()));
+	}
+
+	/** xFermaTube: the open pages changed (a page loaded, a title came): the [N] button shows it. */
+	static void xfTabsChanged(FermataWebView v) {
+		v.getActivity().onSuccess(a -> {
+			ActivityFragment f = a.getActiveFragment();
+			if ((f != null) && (f.getToolBarMediator() instanceof WebToolBarMediator)) {
+				xfSetTabCount(a.getToolBar().findViewById(R.id.browser_tabs));
+			}
+		});
 	}
 
 	/**

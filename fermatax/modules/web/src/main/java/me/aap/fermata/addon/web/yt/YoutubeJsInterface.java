@@ -25,8 +25,6 @@ public class YoutubeJsInterface extends FermataJsInterface {
 	public static final int JS_VIDEO_FULLSCREEN_TAP = JS_LAST + 9;
 	public static final int JS_PLAYBACK_INTENT = JS_LAST + 10;
 	public static final int JS_NAVIGATION = JS_LAST + 11;
-	/** xFermata: 🎤 delsos matavimas (data = įrašo trukmė s). */
-	public static final int JS_XF_MIC = JS_LAST + 50;
 	private final YoutubeMediaEngine engine;
 	private Promise<String> result;
 
@@ -137,7 +135,13 @@ public class YoutubeJsInterface extends FermataJsInterface {
 				engine.adSignal(data);
 				break;
 			case JS_XF_MIC:
-				XfMicRecorder.record((YoutubeWebView) getWebView(), data);
+				XfMicRecorder.record(getWebView(), data);
+				break;
+			case JS_XF_LOG:
+				me.aap.fermata.xf.XfLog.fromPage(data);
+				break;
+			case JS_XF_STATE:
+				me.aap.fermata.addon.web.XfWebSync.saveState(data, ((YoutubeWebView) getWebView()).xfConnection());
 				break;
 			case JS_VIDEO_QUALITIES:
 				Log.d("Video qualities: ", data);

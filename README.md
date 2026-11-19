@@ -5,7 +5,7 @@
 <h1 align="center">xFermaTube</h1>
 
 <p align="center">
-  A lightweight YouTube player for Android Auto that fixes the audio delay automatically, using the phone's microphone.
+  A lightweight YouTube player for Android Auto that fixes the audio delay automatically, using the phone's microphone. Since v1.0.4-beta.3 also a simple browser for other video sites, with the same sync.
 </p>
 
 <p align="center">
@@ -13,7 +13,7 @@
 </p>
 
 > [!WARNING]
-> **After the latest Android Auto update: car screen black or grey, buttons too big, or the picture freezing when the phone is locked?** Try the beta [v1.0.4-beta.2](../../releases/tag/v1.0.4-beta.2). No extra permission is needed any more. [Why](#the-car-picture-freezes-or-the-car-screen-turns-grey-newer-android-auto)
+> **After the latest Android Auto update: car screen black or grey, buttons too big, or the picture freezing when the phone is locked?** Try the beta [v1.0.4-beta.3](../../releases/tag/v1.0.4-beta.3). No extra permission is needed any more. [Why](#the-car-picture-freezes-or-the-car-screen-turns-grey-newer-android-auto) The beta also brings the [Web browser](#the-web-browser-beta) for other video sites.
 
 > [!IMPORTANT]
 > **Quick install** (v1.0.3-beta.3 and later: no helper app, PC or Wi‑Fi needed)
@@ -48,7 +48,7 @@ xFermaTube is a stripped-down fork of [FermataX](https://github.com/chuoinho/fer
 - **Learns your correction.** If you nudge the delay by hand right after a measurement, it remembers the difference and applies it from then on.
 - **Videos play on the car screen only.** Since v1.0.4-beta.1, xFermaTube on the phone is just the settings and the YouTube sign-in: no videos play there, so the phone and the car never fight over one player.
 - **Separate settings for USB and wireless Android Auto.** These connections have different latency, so each keeps its own delay.
-- **YouTube only.** On the car screen the app opens straight into YouTube. The car's side rail has just **Home, History, Back, Refresh, Settings**, and Settings is one short page: appearance, language, YouTube options (quality limit, ad skipping, SponsorBlock, auto fullscreen) and the sync badge. You can sign in to YouTube on the phone once, and the car uses the same session.
+- **YouTube first.** On the car screen the app opens straight into YouTube. The car's side rail has just **YouTube, History | Web, Bookmarks | Back, Refresh, Settings** (Web since v1.0.4-beta.3, see [below](#the-web-browser-beta)), and Settings is one short page: appearance, language, YouTube options (quality limit, ad skipping, SponsorBlock, auto fullscreen) and the sync badge. You can sign in to YouTube on the phone once, and the car uses the same session.
 - **Much smaller.** The APK went from 185 MB to about 19 MB once the unused add-ons were removed (VLC, ExoPlayer, TV, radio, podcasts, audiobooks, SMB, SFTP).
 
 ## What it achieves
@@ -66,6 +66,7 @@ I built this to fix one annoying problem for myself, not to make money or collec
 - **Few permissions.** The APK declares internet, microphone, notifications and media playback, plus a few routine ones (network and Wi-Fi state, wake lock, audio settings). Since v1.0.3-beta.3 it also declares the permission to request installs: **Fix now** uses it only to reinstall xFermaTube itself, it does nothing until you allow it in the phone's settings, and you can turn it off again afterwards. Since v1.0.3 it declares the camera, for the sync check only. Since v1.0.4-beta.1 it declares *Display over other apps* (Samsung: *Appear on top*). Since v1.0.4-beta.2 the app doesn't need it and no longer asks for it: it is an optional extra on Samsung phones only ([why](#the-car-picture-freezes-or-the-car-screen-turns-grey-newer-android-auto)), and it does nothing until you allow it. The location, storage, boot and system-settings permissions that FermataX declares are removed.
 - **The update check asks GitHub only.** Since v1.0.4, once a day when you open the app on the phone, it asks GitHub for the latest release. Nothing is sent except that request; GitHub sees your IP address as with any download. You can turn it off: Settings → **Check for updates**. See [`XfUpdate.java`](fermatax/fermata/src/main/java/me/aap/fermata/xf/XfUpdate.java).
 - **YouTube is the normal mobile YouTube site.** Google's own privacy policy applies, the same as in any browser.
+- **Web browser sites (since v1.0.4-beta.3) never get the microphone, the camera or your location.** A site's own request for them is always refused. One thing to know: to sync a site's video, the app's sync script runs inside the page, so a site could in theory ask the app for the same loudness measurement the sync uses (a loudness level every 10 ms for a few seconds, never sound or words), and only while its audio plays on the car screen. Bookmarks and open pages are stored on the phone only.
 
 ## Install
 
@@ -183,6 +184,20 @@ In fullscreen, a tap shows or hides the control panel. Play/pause, seek and the 
 
 Auto quality picks the best available resolution up to **1080p** by default (Settings → *Highest quality limit*: 720p, 1080p or no limit). Higher resolutions cost battery and data without a visible gain on a car screen.
 
+### The Web browser (beta)
+
+New in v1.0.4-beta.3: **Web** in the side rail opens a simple browser for other video sites (for example a TV service or Vimeo), with the same picture delay as YouTube. It is a beta: I tested it with Android Auto's Desktop Head Unit and partly in my car.
+
+- **Start page.** Web opens on a page with your **open pages** (tap to go back, × to close) and your **bookmarks** (one tap opens them).
+- **Address bar.** Tap it to type an address or a search with the car keyboard. `vimeo.com` is enough, no `https://`. The **[N]** button next to it shows how many pages are open; tap it to see them. Up to 8 pages stay open. Switching reloads the page: sign-ins are kept, the place in a video may not be.
+- **Bookmarks.** **Bookmarks** in the side rail (or 🔖 in the bar) → **Bookmark this page**, one tap, named after the page.
+- **Fullscreen.** When a site's player goes fullscreen, the address bar hides. The **⛶** button hides it on any page. Pull down from the top edge of the page to bring it back, or tap **Web** in the side rail (the start page always shows the bar). The side rail handle stays for Back and the rest.
+- **Sync.** Videos on web pages are delayed like YouTube. The delay belongs to the connection (USB or wireless), so a site starts with the delay YouTube measured, and the **⏱** label has the same **−10 / +10** and **Auto**. Auto measuring works when the site lets the app hear the video's soundtrack; otherwise use −10 / +10.
+- **Protected (DRM) video**, for example paid TV services: its frames can't be copied, so the app delays it differently, by shifting the video's timestamps as it is loaded. That works, but a change in the delay shows up only after about 20 seconds, and the microphone can't measure it: set it with −10 / +10. The label says **DRM**.
+- **Drop-down lists** (for example a sign-in method) open on the car screen. Android normally shows them in a separate window the car can't display.
+
+Not supported yet: players inside an embedded frame (iframe) are not delayed, and only one video per page is synced (the one that plays with sound).
+
 > The release APK is debug-signed and built for arm64 phones only.
 
 > **Safety:** the app has no driving lock of its own, and in my car the video keeps playing while moving. Other cars or Android Auto versions may block it. The driver must never watch video while driving: it is dangerous and illegal in many places. Use it only while parked or for passengers, and follow your local laws.
@@ -209,6 +224,9 @@ Key files:
 | Injection and USB / wireless detection | `fermatax/modules/web/.../yt/YoutubeWebView.java` |
 | YouTube-only switches | `fermatax/fermata/src/main/java/me/aap/fermata/xf/` |
 | Car side rail | `fermatax/fermata/.../ui/glass/rail/GlassNavigationRailView.java` |
+| Web browser: start page, open pages, sync on web pages | `fermatax/modules/web/.../XfWebSync.java`, `XfWebTabs.java` |
+| Delay for protected (DRM) video | `fermatax/modules/web/src/main/assets/xf-mse-shift.js` |
+| Drop-down lists on the car screen | `fermatax/modules/web/src/main/assets/xf-select.js` |
 
 The microphone is recorded in Java rather than with the browser's `getUserMedia`. Android Auto treats `getUserMedia` as a phone call and pauses all media.
 

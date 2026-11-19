@@ -563,6 +563,13 @@ public class FermataWebClient extends WebViewClientCompat {
 	}
 
 	@Override
+	public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
+		// xFermaTube: the start page with the bookmarks (plain browser only)
+		WebResourceResponse start = XfWebSync.startPage(view, request);
+		return (start != null) ? start : super.shouldInterceptRequest(view, request);
+	}
+
+	@Override
 	public void onPageFinished(WebView view, String url) {
 		FermataWebView v = (FermataWebView) view;
 		v.mirroredPageFinished(url);
@@ -592,6 +599,8 @@ public class FermataWebClient extends WebViewClientCompat {
 	public boolean shouldOverrideUrlLoading(@NonNull WebView view,
 																			@NonNull WebResourceRequest request) {
 		if (!request.isForMainFrame()) return false;
+		// xFermaTube: the links of the start page that open or close a tab
+		if (XfWebTabs.navigation(view, request)) return true;
 		if (!isExternalNavigationAllowed(request.getUrl().toString())) {
 			cancelUrlNavigation();
 			if (view instanceof FermataWebView web) web.externalNavigationRejected();

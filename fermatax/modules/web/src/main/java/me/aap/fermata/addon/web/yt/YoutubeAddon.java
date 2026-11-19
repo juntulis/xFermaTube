@@ -551,7 +551,7 @@ public class YoutubeAddon extends WebBrowserAddon
 		return prefs.contains(XF_MAX_QUALITY);
 	}
 
-	boolean xfSyncBadge() {
+	public boolean xfSyncBadge() {
 		return getPreferenceStore().getBooleanPref(XF_SYNC_BADGE);
 	}
 

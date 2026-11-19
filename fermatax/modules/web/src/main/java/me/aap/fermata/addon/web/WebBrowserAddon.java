@@ -363,12 +363,16 @@ public class WebBrowserAddon implements FermataFragmentAddon, SharedPreferenceSt
 
 		Map<String, String> m = new LinkedHashMap<>(p.length);
 		for (int i = 0; i < p.length; i++) {
-			m.put(p[i], p[++i]);
+			// xFermaTube: a start page bookmarked by an older build is left out
+			if (p[i].startsWith("https://xf.invalid/")) ++i;
+			else m.put(p[i], p[++i]);
 		}
 		return m;
 	}
 
 	void addBookmark(String name, String url) {
+		// xFermaTube: the start page itself (xf.invalid) is never a bookmark
+		if ((url == null) || url.startsWith("https://xf.invalid/")) return;
 		Map<String, String> m = getBookmarks();
 
 		if (m.isEmpty()) {

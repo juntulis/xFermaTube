@@ -1,8 +1,9 @@
 package me.aap.fermata.xf;
 
 /**
- * xFermata: fragmentas, kurį galima valdyti iš automobilio šoninės juostos (Home / Atgal / Perkrauti).
- * Įgyvendina YouTube fragmentas (web modulyje), juosta jį pasiekia per šią sąsają.
+ * xFermata: a fragment the side rail of the car screen can drive (home / back / refresh and the
+ * program's own action). Implemented by the Web browser fragment and, with its own behaviour, by
+ * the YouTube fragment (both in the web module); the rail reaches them through this interface.
  */
 public interface XfNavigable {
 
@@ -17,4 +18,13 @@ public interface XfNavigable {
 
 	/** Atidaro žiūrėjimo istoriją (paskutiniai video). */
 	void xfHistory();
+
+	/** Opens the bookmarks menu (Web). */
+	default void xfBookmarks() {
+	}
+
+	/** A page's video is shown fullscreen (Web): the car screen hides the address bar then. */
+	default boolean xfFullScreen() {
+		return false;
+	}
 }
