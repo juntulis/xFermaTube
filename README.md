@@ -5,7 +5,7 @@
 <h1 align="center">xFermaTube</h1>
 
 <p align="center">
-  A lightweight YouTube player for Android Auto that fixes the audio delay automatically, using the phone's microphone. Since v1.0.4 also a simple browser for other video sites, with the same sync.
+  A lightweight YouTube player for Android Auto that fixes the audio delay automatically, using the phone's microphone. Since v1.1 also a simple browser for other video sites, with the same sync.
 </p>
 
 <p align="center">
@@ -13,7 +13,7 @@
 </p>
 
 > [!TIP]
-> **New in [v1.0.4](../../releases/tag/v1.0.4):**
+> **New in [v1.1](../../releases/tag/v1.1):**
 > - **Works with the newer Android Auto** (18.2 and later): no more black or grey car screen or oversized buttons, and the picture keeps moving with the phone locked. [Why](#the-car-picture-freezes-or-the-car-screen-turns-grey-newer-android-auto)
 > - **[Web browser](#the-web-browser)** for other video sites, with the same sound and picture sync as YouTube.
 > - **Best sync: do the [one-time camera check](#the-one-time-sync-check).** It is the most accurate way to find the delay.
@@ -49,9 +49,9 @@ xFermaTube is a stripped-down fork of [FermataX](https://github.com/chuoinho/fer
 - **Automatic delay measurement with the phone's microphone.** The app records about 10 seconds of what the car's speakers actually play. It compares that with the video's own soundtrack and finds the lag by cross-correlation. In auto mode this repeats on its own: about 4 seconds after a new video starts (short 6-second measurements, the first clear one is applied right away, so the picture is in sync within a minute, often sooner), after a buffering stall, and every 20 seconds (every minute once the delay has settled). Each new video starts with fresh measurements, because the lag differs from video to video. A single measurement is noisy (±20–30 ms), so fine-tuning uses the median of the last five measurements. A big jump, for example after a stall, needs two measurements that agree (one of them clear), or three of any kind. Changes are applied gradually so the picture doesn't jump.
 - **One-time check with the phone camera.** The microphone can't hear everything: the phone adds its own lag to the measurement, and Android Auto delays the picture on its way to the car screen. A one-time check fixes that part: the car screen flashes and beeps, and the phone camera and microphone measure how far apart they really are. The result is kept as a correction on top of every later measurement.
 - **Learns your correction.** If you nudge the delay by hand right after a measurement, it remembers the difference and applies it from then on.
-- **Videos play on the car screen only.** Since v1.0.4, xFermaTube on the phone is just the settings and the YouTube sign-in: no videos play there, so the phone and the car never fight over one player.
+- **Videos play on the car screen only.** Since v1.1, xFermaTube on the phone is just the settings and the YouTube sign-in: no videos play there, so the phone and the car never fight over one player.
 - **Separate settings for USB and wireless Android Auto.** These connections have different latency, so each keeps its own delay.
-- **YouTube first.** On the car screen the app opens straight into YouTube. The car's side rail has just **YouTube, History | Web, Bookmarks | Back, Refresh, Settings** (Web since v1.0.4, see [below](#the-web-browser)), and Settings is one short page: appearance, language, YouTube options (quality limit, ad skipping, SponsorBlock, auto fullscreen) and the sync badge. You can sign in to YouTube on the phone once, and the car uses the same session.
+- **YouTube first.** On the car screen the app opens straight into YouTube. The car's side rail has just **YouTube, History | Web, Bookmarks | Back, Refresh, Settings** (Web since v1.1, see [below](#the-web-browser)), and Settings is one short page: appearance, language, YouTube options (quality limit, ad skipping, SponsorBlock, auto fullscreen) and the sync badge. You can sign in to YouTube on the phone once, and the car uses the same session.
 - **Much smaller.** The APK went from 185 MB to about 19 MB once the unused add-ons were removed (VLC, ExoPlayer, TV, radio, podcasts, audiobooks, SMB, SFTP).
 
 ## What it achieves
@@ -66,10 +66,10 @@ I built this to fix one annoying problem for myself, not to make money or collec
 - **No ads, analytics or tracking added.** There are no analytics or crash-reporting SDKs, no accounts and no xFermata server. Nothing is sent to me.
 - **The microphone stays on the phone.** It is used only for the sync measurement and only while a video (or the sync check) is playing. The recording is turned into a loudness curve in memory to find the delay, and the audio is never saved or uploaded. See [`XfMicRecorder.java`](fermatax/modules/web/src/main/java/me/aap/fermata/addon/web/yt/XfMicRecorder.java).
 - **The camera is used only during the one-time sync check.** It is asked for when you tap **Start**, not at install. Each frame is turned into one brightness number in memory to find the flashes; no picture is saved or uploaded. See [`XfCamSync.java`](fermatax/modules/web/src/main/java/me/aap/fermata/addon/web/yt/XfCamSync.java).
-- **Few permissions.** The APK declares internet, microphone, notifications and media playback, plus a few routine ones (network and Wi-Fi state, wake lock, audio settings). Since v1.0.3 it also declares the permission to request installs: **Fix now** uses it only to reinstall xFermaTube itself, it does nothing until you allow it in the phone's settings, and you can turn it off again afterwards. Since v1.0.3 it declares the camera, for the sync check only. Since v1.0.4 it declares *Display over other apps* (Samsung: *Appear on top*). The app doesn't need it and doesn't ask for it: it is an optional extra on Samsung phones only ([why](#the-car-picture-freezes-or-the-car-screen-turns-grey-newer-android-auto)), and it does nothing until you allow it. The location, storage, boot and system-settings permissions that FermataX declares are removed.
-- **The update check asks GitHub only.** Since v1.0.4, once a day when you open the app on the phone, it asks GitHub for the latest release. Nothing is sent except that request; GitHub sees your IP address as with any download. You can turn it off: Settings → **Check for updates**. See [`XfUpdate.java`](fermatax/fermata/src/main/java/me/aap/fermata/xf/XfUpdate.java).
+- **Few permissions.** The APK declares internet, microphone, notifications and media playback, plus a few routine ones (network and Wi-Fi state, wake lock, audio settings). Since v1.0.3 it also declares the permission to request installs: **Fix now** uses it only to reinstall xFermaTube itself, it does nothing until you allow it in the phone's settings, and you can turn it off again afterwards. Since v1.0.3 it declares the camera, for the sync check only. Since v1.1 it declares *Display over other apps* (Samsung: *Appear on top*). The app doesn't need it and doesn't ask for it: it is an optional extra on Samsung phones only ([why](#the-car-picture-freezes-or-the-car-screen-turns-grey-newer-android-auto)), and it does nothing until you allow it. The location, storage, boot and system-settings permissions that FermataX declares are removed.
+- **The update check asks GitHub only.** Since v1.1, once a day when you open the app on the phone, it asks GitHub for the latest release. Nothing is sent except that request; GitHub sees your IP address as with any download. You can turn it off: Settings → **Check for updates**. See [`XfUpdate.java`](fermatax/fermata/src/main/java/me/aap/fermata/xf/XfUpdate.java).
 - **YouTube is the normal mobile YouTube site.** Google's own privacy policy applies, the same as in any browser.
-- **Web browser sites (since v1.0.4) never get the microphone, the camera or your location.** A site's own request for them is always refused. One thing to know: to sync a site's video, the app's sync script runs inside the page, so a site could in theory ask the app for the same loudness measurement the sync uses (a loudness level every 10 ms for a few seconds, never sound or words), and only while its audio plays on the car screen. Bookmarks and open pages are stored on the phone only.
+- **Web browser sites (since v1.1) never get the microphone, the camera or your location.** A site's own request for them is always refused. One thing to know: to sync a site's video, the app's sync script runs inside the page, so a site could in theory ask the app for the same loudness measurement the sync uses (a loudness level every 10 ms for a few seconds, never sound or words), and only while its audio plays on the car screen. Bookmarks and open pages are stored on the phone only.
 
 ## Install
 
@@ -88,7 +88,7 @@ Since **v1.0.3** the app fixes this itself. You install the APK the normal way, 
 6. **Do the one-time sync check** when the phone offers it: see [below](#the-one-time-sync-check).
 7. Optional: open xFermaTube on the phone and tap **Sign in to YouTube**. The car uses the same session.
 
-**Updates.** Since v1.0.4 the app tells you when a new version is out (on the phone, at most once a day). Tap **Update**: it downloads the new APK from GitHub, checks it, and hands it to the phone's installer the same way **Fix now** does, so the video app stays in Android Auto. You can also check by hand: Settings → **Check for updates now**. Pre-releases (betas) are never offered.
+**Updates.** Since v1.1 the app tells you when a new version is out (on the phone, at most once a day). Tap **Update**: it downloads the new APK from GitHub, checks it, and hands it to the phone's installer the same way **Fix now** does, so the video app stays in Android Auto. You can also check by hand: Settings → **Check for updates now**. Pre-releases (betas) are never offered.
 
 On older versions, open the new APK over the old one. Your settings are kept. The app may then ask for **Fix now** again, because the update changes the install record: do it the same way.
 
@@ -117,13 +117,13 @@ When you ask for help, tap **Copy** in the install check and paste the report: i
 
 ### The car picture freezes or the car screen turns grey (newer Android Auto)
 
-A newer Android Auto (seen with 18.2) shows apps on the car screen in a new kind of window. That broke xFermaTube in three ways, and v1.0.3 and older have all of them. **v1.0.4 fixes them.**
+A newer Android Auto (seen with 18.2) shows apps on the car screen in a new kind of window. That broke xFermaTube in three ways, and v1.0.3 and older have all of them. **v1.1 fixes them.**
 
 - **The car screen stays black or keeps restarting.** The new window refuses a setting the app's theme used.
 - **The picture freezes while the sound keeps playing**, a few seconds after the phone is locked or shows another app. The phone doesn't count the new car window as visible, and Samsung phones (One UI) stop the screen drawing of apps that have no visible window, to save battery.
 - **The car screen turns plain grey, the buttons are far too big, or they vanish when the car switches to night mode.** The new window describes itself with the phone's screen (its pixel density, portrait) instead of the car's, and switches to the car's values a moment later. The app laid everything out for the wrong screen.
 
-How v1.0.4 fixes the last two, with no extra permission:
+How v1.1 fixes the last two, with no extra permission:
 
 - While the car screen is on, the app posts an empty input event to its own frame clock a few times a second. Samsung keeps drawing an app that is handling input, so the picture keeps moving with the phone locked. Only on Samsung phones.
 - The app always lays the car screen out with the car display's own values. With an older Android Auto the two already agree, and nothing changes.
@@ -192,7 +192,7 @@ Auto quality picks the best available resolution up to **1080p** by default (Set
 
 ### The Web browser
 
-New in v1.0.4: **Web** in the side rail opens a simple browser for other video sites (for example a TV service or Vimeo), with the same picture delay as YouTube. Tested in my car and with Android Auto's Desktop Head Unit.
+New in v1.1: **Web** in the side rail opens a simple browser for other video sites (for example a TV service or Vimeo), with the same picture delay as YouTube. Tested in my car and with Android Auto's Desktop Head Unit.
 
 - **Start page.** Web opens on a page with your **open pages** (tap to go back, × to close) and your **bookmarks** (one tap opens them).
 - **Address bar.** Tap it to type an address or a search with the car keyboard. `vimeo.com` is enough, no `https://`. The **[N]** button next to it shows how many pages are open; tap it to see them. Up to 8 pages stay open. Switching reloads the page: sign-ins are kept, the place in a video may not be.
