@@ -22,7 +22,7 @@
 > 3. On the phone: Android Auto settings → tap **Version** 10 times → ⋮ → **Developer settings** → tick **Unknown sources**.
 > 4. Open xFermaTube on the phone again and allow the **microphone**.
 > 5. In the car, open **xFermaTube** (play icon), not *xF Audio* (speaker icon).
-> 6. **Do the one-time sync check (new in v1.0.3).** The first time xFermaTube is open on the car screen, the phone offers it. Park, tap **Start**, point the phone's back camera at the car screen and hold still for about a minute. The car flashes and beeps, the phone measures the difference and fixes it. You do it once per connection type (USB / wireless). [More](#the-one-time-sync-check)
+> 6. **Do the one-time sync check (new in v1.0.3).** The first time xFermaTube is open on the car screen, the phone offers it. Park, tap **Start**, point the phone's back camera at the car screen and hold still for about a minute. The car flashes and beeps, the phone measures the difference and fixes it. You do it once per connection type (USB / wireless). **This gives the best sync:** the microphone alone can be off by a few tens of milliseconds. Skipped it? Settings → **Sync sound and picture (camera)**. [More](#the-one-time-sync-check)
 > 7. **Sync is not instant.** After that, auto sync listens to each new video first: give it up to a minute before sound and picture line up.
 >
 > Older versions (v1.0.2 and earlier) have no **Fix now**: install those through AAenabler, see the [install guide](#install).
@@ -164,7 +164,7 @@ After that you don't have to do anything: every new video syncs by itself. In my
 
 - Not now? Tap **Later** and it asks again next time you connect.
 - Never want it? Tap **Don't ask again**.
-- Prefer to tune by ear? The **−10 / +10** buttons on the ⏱ label still work.
+- Prefer to tune by ear? The **−10 / +10** buttons on the ⏱ label still work, but the camera check is more accurate. If the sync feels off, run the check first.
 - Want to redo it? Settings → **Sync sound and picture (camera)**, with the car connected.
 
 **Sync is not instant.** The app can't know the delay in advance: it has to hear the car's speakers through the phone's microphone and compare that with the video's soundtrack. For each new video it can take up to a minute before sound and picture line up. It can take longer when the audio is quiet, the car is noisy, or the music is very rhythmic. Until then the video uses the delay from the previous video. The sound must be audible in the cabin: with the volume at zero there is nothing to measure.
