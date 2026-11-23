@@ -167,6 +167,9 @@ public class YoutubeWebView extends FermataWebView {
 			evaluateJavascript("window.__xfBadge=" + getAddon().xfSyncBadge() +
 					";window.__xfDelay&&window.__xfDelay.attach();", null);
 		}
+		if (getAddon().xfBadgePosChanged(prefs)) {
+			evaluateJavascript("window.__xfBadgePos='" + getAddon().xfBadgePos(false) + "';", null);
+		}
 		if (getAddon().xfCamCorrChanged(prefs)) xfApplyCamCorr();
 		if (getAddon().autoFullscreenChanged(prefs) && (mediaEngine != null))
 			mediaEngine.onAutomaticEntryPreferenceChanged();
@@ -1084,7 +1087,8 @@ public class YoutubeWebView extends FermataWebView {
 		// Ryšio tipas: delsa ir korekcija saugomos atskirai USB / belaidžiam AA / telefonui.
 		String conn = xfConnection();
 		evaluateJavascript("window.__xfConn='" + conn + "';window.__xfBadge=" +
-				getAddon().xfSyncBadge() + ";" + videoDelayJs, null);
+				getAddon().xfSyncBadge() + ";window.__xfBadgePos='" + getAddon().xfBadgePos(false) + "';" +
+				videoDelayJs, null);
 		if (!"phone".equals(conn)) {
 			xfCarRef = new java.lang.ref.WeakReference<>(this);
 			getAddon().xfCarWebReady();

@@ -8,7 +8,7 @@ public final class XfConfig {
 	/** true = programa atsidaro tiesiai į YouTube, kiti meniu punktai paslėpti. */
 	public static final boolean YOUTUBE_ONLY = true;
 	/** xFermaTube leidimo numeris (GitHub release); FermataX versionName / versionCode nekeičiami. */
-	public static final String RELEASE = "1.1";
+	public static final String RELEASE = "1.1.1-beta.1";
 	public static final String YOUTUBE_ADDON_CLASS = "me.aap.fermata.addon.web.yt.YoutubeAddon";
 	/**
 	 * Šoninėje juostoje programa „Web“ (FermataX naršyklė kitoms video svetainėms) su savo

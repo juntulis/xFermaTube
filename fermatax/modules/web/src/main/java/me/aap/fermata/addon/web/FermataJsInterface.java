@@ -23,6 +23,8 @@ public class FermataJsInterface {
 	public static final int JS_XF_LOG = JS_LAST + 51;
 	/** xFermata: the delay the page now uses ("conn;delayMs;correctionMs"). */
 	public static final int JS_XF_STATE = JS_LAST + 52;
+	/** xFermaTube: ⏱ dragged to a new place ("x,y", 0..1 of the free video area). */
+	public static final int JS_XF_BADGE = JS_LAST + 53;
 	private final FermataWebView webView;
 
 	public FermataJsInterface(FermataWebView webView) {
@@ -71,6 +73,10 @@ public class FermataJsInterface {
 				break;
 			case JS_XF_STATE:
 				XfWebSync.saveState(getWebView(), data);
+				break;
+			case JS_XF_BADGE:
+				// YouTube's own view keeps the YouTube place; any other page can only move the Web one
+				XfWebSync.saveBadgePos(getWebView(), data);
 				break;
 		}
 	}

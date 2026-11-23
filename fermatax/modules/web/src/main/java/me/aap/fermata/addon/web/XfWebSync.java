@@ -224,7 +224,8 @@ public final class XfWebSync {
 		String js = script(v.getContext());
 		if (js == null) return;
 		v.evaluateJavascript("window.__xfWeb=true;window.__xfConn='" + conn + "';window.__xfBadge=" +
-				badge() + ";window.__xfSeed=" + seed(conn) + ";" + js, null);
+				badge() + ";window.__xfBadgePos='" + badgePos(true) + "';window.__xfSeed=" + seed(conn) +
+				";" + js, null);
 	}
 
 	/**
@@ -287,19 +288,54 @@ public final class XfWebSync {
 		}
 	}
 
+	/** Where ⏱ sits ("x,y"), for YouTube or for the Web browser. */
+	public static String badgePos(boolean web) {
+		try {
+			YoutubeAddon yt = AddonManager.get().getAddon(YoutubeAddon.class);
+			return (yt == null) ? "0,0" : yt.xfBadgePos(web);
+		} catch (RuntimeException ex) {
+			return "0,0";
+		}
+	}
+
+	/** ⏱ was dragged on a page: YouTube's view saves the YouTube place, a browser page the Web one. */
+	static void saveBadgePos(FermataWebView v, String data) {
+		boolean web;
+		if (isBrowser(v)) web = true;
+		else if (v instanceof me.aap.fermata.addon.web.yt.YoutubeWebView) web = false;
+		else return;
+		try {
+			YoutubeAddon yt = AddonManager.get().getAddon(YoutubeAddon.class);
+			if (yt != null) yt.xfSetBadgePos(web, data);
+		} catch (RuntimeException ex) {
+			Log.w(ex, "xF badge position");
+		}
+	}
+
 	private static SharedPreferences prefs() {
 		return FermataApplication.get().getSharedPreferences(PREFS, Context.MODE_PRIVATE);
 	}
 
-	/** The last known delay and microphone correction of this connection, as a JS value. */
+	/**
+	 * The last known delay and microphone correction of this connection, and the sync signal's
+	 * constant (k: the page's sound reaches the microphone this much later than the app's own sync
+	 * signal; it belongs to the phone, so another connection's value is used until this one has its own).
+	 */
 	private static String seed(String conn) {
 		SharedPreferences p = prefs();
-		if (!p.contains("d_" + conn)) return "null";
-		return "{d:" + p.getInt("d_" + conn, 0) + ",o:" + p.getInt("o_" + conn, 0) + "}";
+		Integer k = p.contains("k_" + conn) ? Integer.valueOf(p.getInt("k_" + conn, 0)) : null;
+		for (String c : new String[]{"usb", "wifi", "phone"}) {
+			if ((k == null) && p.contains("k_" + c)) k = p.getInt("k_" + c, 0);
+		}
+		String ks = (k != null) ? "k:" + k : "";
+		if (!p.contains("d_" + conn)) return ks.isEmpty() ? "null" : "{" + ks + "}";
+		return "{d:" + p.getInt("d_" + conn, 0) + ",o:" + p.getInt("o_" + conn, 0) +
+				(ks.isEmpty() ? "" : "," + ks) + "}";
 	}
 
 	/**
-	 * The page reports the delay it now uses: "conn;delayMs;correctionMs". Comes from page script:
+	 * The page reports the delay it now uses: "conn;delayMs;correctionMs[;signalK]" (the last: the
+	 * sync signal's constant, see XfLinkProbe and seed()). Comes from page script:
 	 * taken only for the connection the page really is on, as numbers within the script's own
 	 * limits, and not more often than the script itself reports.
 	 *
@@ -310,17 +346,22 @@ public final class XfWebSync {
 		if (!"usb".equals(conn) && !"wifi".equals(conn) && !"phone".equals(conn)) return;
 		long now = SystemClock.elapsedRealtime();
 		if (now - stateAt < STATE_GAP_MS) return;
-		String[] s = data.split(";", 4);
-		if ((s.length != 3) || !conn.equals(s[0])) return;
+		String[] s = data.split(";", 5);
+		if (((s.length != 3) && (s.length != 4)) || !conn.equals(s[0])) return;
 		try {
 			int d = Integer.parseInt(s[1]);
 			int o = Integer.parseInt(s[2]);
 			if ((d < 0) || (d > 3000) || (o < -500) || (o > 500)) return;
+			Integer c = (s.length == 4) ? Integer.valueOf(Integer.parseInt(s[3])) : null;
+			if ((c != null) && ((c < -500) || (c > 500))) return;
 			SharedPreferences p = prefs();
-			if (p.contains("d_" + conn) && (p.getInt("d_" + conn, 0) == d) && (p.getInt("o_" + conn, 0) == o))
+			if (p.contains("d_" + conn) && (p.getInt("d_" + conn, 0) == d) && (p.getInt("o_" + conn, 0) == o) &&
+					((c == null) || (p.contains("k_" + conn) && (p.getInt("k_" + conn, 0) == c))))
 				return;
 			stateAt = now;
-			p.edit().putInt("d_" + conn, d).putInt("o_" + conn, o).apply();
+			SharedPreferences.Editor e = p.edit().putInt("d_" + conn, d).putInt("o_" + conn, o);
+			if (c != null) e.putInt("k_" + conn, c);
+			e.apply();
 		} catch (NumberFormatException ignore) {
 		}
 	}

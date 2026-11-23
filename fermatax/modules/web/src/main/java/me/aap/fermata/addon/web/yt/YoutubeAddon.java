@@ -86,6 +86,16 @@ public class YoutubeAddon extends WebBrowserAddon
 	private static final String[] XF_MAX_QUALITY_LEVELS = {"hd720", "hd1080", "highres"};
 	// xFermata: ar rodyti ⏱ ženkliuką video kampe (vėlinimas ir auto veikia ir jį paslėpus).
 	private static final Pref<BooleanSupplier> XF_SYNC_BADGE = Pref.b("XF_SYNC_BADGE", true);
+	// xFermaTube: ⏱ vieta video plote atskirai YouTube ir Web naršyklei: 0–3 kampai (VK, VD, AK, AD),
+	// 4 = kur nutempta pirštu (XF_BADGE_XY_*: „x,y“, 0..1 laisvo ploto dalys).
+	private static final String[] XF_BADGE_CORNERS = {"0,0", "1,0", "0,1", "1,1"};
+	private static final int XF_BADGE_DRAGGED = 4;
+	private static final Pref<IntSupplier> XF_BADGE_POS_YT = Pref.i("XF_BADGE_POS_YT", 0);
+	private static final Pref<IntSupplier> XF_BADGE_POS_WEB = Pref.i("XF_BADGE_POS_WEB", 0);
+	private static final Pref<Supplier<String>> XF_BADGE_XY_YT = Pref.s("XF_BADGE_XY_YT", "0,0");
+	private static final Pref<Supplier<String>> XF_BADGE_XY_WEB = Pref.s("XF_BADGE_XY_WEB", "0,0");
+	// xFermaTube: the app's own sync signal during 🎤 (XfLinkProbe): 0 off, 1 inaudible, 2 audible
+	private static final Pref<IntSupplier> XF_LINK_PROBE = Pref.i("XF_LINK_PROBE", 1);
 	// xFermaTube: telefono kameros matavimo rezultatas automobilio WebView'ui („ms@laikas“, kad kiekvienas
 	// matavimas būtų naujas pokytis). Automobilio WebView jį pritaiko vieną kartą ir išvalo.
 	private static final Pref<Supplier<String>> XF_CAM_CORR = Pref.s("XF_CAM_CORR", "");
@@ -344,6 +354,72 @@ public class YoutubeAddon extends WebBrowserAddon
 			o.title = R.string.xf_sync_badge;
 			o.subtitle = R.string.xf_sync_badge_sub;
 		});
+		xfAddBadgePosPref(set, XF_BADGE_POS_YT, R.string.xf_badge_pos_yt);
+		if (me.aap.fermata.xf.XfConfig.WEB_PROTO)
+			xfAddBadgePosPref(set, XF_BADGE_POS_WEB, R.string.xf_badge_pos_web);
+		set.addListPref(o -> {
+			o.store = getPreferenceStore();
+			o.pref = XF_LINK_PROBE;
+			o.title = R.string.xf_link_probe;
+			o.subtitle = R.string.xf_link_probe_sub;
+			o.formatSubtitle = true;
+			o.values = new int[]{R.string.xf_link_probe_off, R.string.xf_link_probe_hi,
+					R.string.xf_link_probe_lo};
+		});
+	}
+
+	/** XfLinkProbe mode (OFF, INAUDIBLE, AUDIBLE). */
+	int xfLinkProbe() {
+		int m = getPreferenceStore().getIntPref(XF_LINK_PROBE);
+		return ((m >= XfLinkProbe.OFF) && (m <= XfLinkProbe.AUDIBLE)) ? m : XfLinkProbe.OFF;
+	}
+
+	private void xfAddBadgePosPref(PreferenceSet set, Pref<IntSupplier> pref, int title) {
+		set.addListPref(o -> {
+			o.store = getPreferenceStore();
+			o.pref = pref;
+			o.title = title;
+			o.subtitle = R.string.xf_badge_pos_sub;
+			o.formatSubtitle = true;
+			o.values = new int[]{R.string.xf_badge_pos_tl, R.string.xf_badge_pos_tr,
+					R.string.xf_badge_pos_bl, R.string.xf_badge_pos_br, R.string.xf_badge_pos_drag};
+		});
+	}
+
+	/** ⏱ vieta puslapio skriptui: „x,y“, 0..1 laisvo video ploto dalys (0,0 – viršuje kairėje). */
+	public String xfBadgePos(boolean web) {
+		int i = getPreferenceStore().getIntPref(web ? XF_BADGE_POS_WEB : XF_BADGE_POS_YT);
+		if ((i >= 0) && (i < XF_BADGE_CORNERS.length)) return XF_BADGE_CORNERS[i];
+		String xy = xfCleanPos(getPreferenceStore().getStringPref(web ? XF_BADGE_XY_WEB : XF_BADGE_XY_YT));
+		return (xy == null) ? XF_BADGE_CORNERS[0] : xy;
+	}
+
+	/** ⏱ nutemptas pirštu: vieta įsimenama, o nustatymas perjungiamas į „Where I dragged it“. */
+	public void xfSetBadgePos(boolean web, String data) {
+		String xy = xfCleanPos(data);
+		if (xy == null) return;
+		try (PreferenceStore.Edit e = getPreferenceStore().editPreferenceStore()) {
+			e.setStringPref(web ? XF_BADGE_XY_WEB : XF_BADGE_XY_YT, xy);
+			e.setIntPref(web ? XF_BADGE_POS_WEB : XF_BADGE_POS_YT, XF_BADGE_DRAGGED);
+		}
+	}
+
+	boolean xfBadgePosChanged(List<Pref<?>> prefs) {
+		return prefs.contains(XF_BADGE_POS_YT) || prefs.contains(XF_BADGE_XY_YT);
+	}
+
+	/** „x,y“ su skaičiais 0..1 (puslapis gali atsiųsti bet ką); null – netinkama. */
+	static String xfCleanPos(String s) {
+		if (s == null) return null;
+		String[] p = s.split(",");
+		if (p.length != 2) return null;
+		try {
+			float x = Float.parseFloat(p[0].trim()), y = Float.parseFloat(p[1].trim());
+			if (!(x >= 0f && x <= 1f && y >= 0f && y <= 1f)) return null;
+			return String.format(java.util.Locale.ROOT, "%.3f,%.3f", x, y);
+		} catch (NumberFormatException ex) {
+			return null;
+		}
 	}
 
 	@Override

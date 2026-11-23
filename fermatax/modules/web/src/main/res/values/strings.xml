@@ -25,6 +25,19 @@
     <string name="xf_max_quality_none" translatable="false">No limit</string>
     <string name="xf_sync_badge" translatable="false">Show A/V sync badge (⏱)</string>
     <string name="xf_sync_badge_sub" translatable="false">The small ⏱ control in the video corner. Delay and auto sync keep working when it is hidden.</string>
+    <string name="xf_badge_pos_yt" translatable="false">⏱ position on YouTube</string>
+    <string name="xf_badge_pos_web" translatable="false">⏱ position in Web</string>
+    <string name="xf_badge_pos_sub" translatable="false">%1$s. You can also drag ⏱ with your finger on the video; it stays where you leave it.</string>
+    <string name="xf_badge_pos_tl" translatable="false">Top left</string>
+    <string name="xf_badge_pos_tr" translatable="false">Top right</string>
+    <string name="xf_badge_pos_bl" translatable="false">Bottom left</string>
+    <string name="xf_badge_pos_br" translatable="false">Bottom right</string>
+    <string name="xf_badge_pos_drag" translatable="false">Where I dragged it</string>
+    <string name="xf_link_probe" translatable="false">Sync signal</string>
+    <string name="xf_link_probe_sub" translatable="false">%1$s. During each 🎤 measurement the app plays a short signal of its own and hears how late the car plays it: auto sync then works on every site, also where the site does not hand out its sound (DRM). Off: on such sites the delay is set by hand.</string>
+    <string name="xf_link_probe_off" translatable="false">Off</string>
+    <string name="xf_link_probe_hi" translatable="false">Inaudible tone (18–19.5 kHz)</string>
+    <string name="xf_link_probe_lo" translatable="false">Audible chirps (2–4 kHz)</string>
     <string name="xf_subtitles" translatable="false">Subtitles</string>
     <string name="xf_subtitles_off" translatable="false">Off</string>
     <string name="xf_subtitles_none" translatable="false">No subtitles for this video</string>
